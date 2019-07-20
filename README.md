@@ -44,7 +44,7 @@ setpath     设置默认下载保存路径
 pip install readline requests requests-toolbelt
 ```
 
-如果你的电脑没有安装python3，请在release板块下载最新的可执行文件
+如果你的电脑没有安装python3，请在release板块下载最新的可执行文件  
 如果网速慢请转步蓝奏云下载:https://www.lanzous.com/b837584/
 
 请关注此页面以获取最新版本~
