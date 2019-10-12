@@ -1,214 +1,526 @@
 # 蓝奏云网盘API
-> 基于Python3实现,目前最强的蓝奏云API 
+> 基于Python3实现,最强的蓝奏云API~ 
 
 ![](https://pc.woozooo.com/img/logo2.gif)  
 
-
 ### [蓝奏云注册](https://pc.woozooo.com/account.php?action=register)
 
-本API实现的功能:
-- [x] 登录蓝奏云
-- [x] 提取下载直链
-- [x] 上传文件
-- [x] 后缀名伪装
-- [x] 删除文件(夹)
-- [x] 设置分享密码
-- [x] 恢复文件(夹)
-- [x] 清空回收站
-- [x] 大文件上传支持
-- [x] 网盘文件浏览
+# 更新说明
+- 修复了登录时 `formhash` 错误的问题
+- 修复了因蓝奏云官网变化导致的功能异常
+- 细化 API 接口的功能，某些接口被取消、更名
+- 上传文件、创建文件夹时会进行存在性检查
+- 不再向上抛异常，而是返回错误码
+- 用脚写代码，用心写文档
 
-# 说明
+# TODO
+- 实现 GUI 界面
 
-百度云账号被限速到20kb/s，pandownload也是勉强支撑着，没钱氪金，相当难受。。。
-于是乎，我们的救世主蓝奏云闪亮登场，作为主打小文件储存市场的免费网盘，可以说相当良心，空间不限，最重要的是**不限速**！！
-然而，蓝奏云的弱点很明显，单个文件不能超过100MB，对文件格式也有不少限制。而且官方也没有提供
-可供调用的api，如何用代码操作蓝奏云也是一个问题。但好运的是，这些狗屁问题我已经解决了。
-现在，你可以用几行简单的代码操控蓝奏云，上传、下载、删除、设置分享密码、清理回收站、恢复文件，
-此外，我还给你提供了***下载直链提取***和***大文件分段上传***的功能，现在，你可以随意上传大文件，直链下载
-不限速，无广告，无限空间！！！文件格式也没有任何限制，后缀自动伪装，下载自动删除。  
+# 简介
 
-一切的细节已经为你封装，你只需要将本api导入你的项目，跟随下面的文档，便能进行二次开发。
-打开你的脑洞，好好利用这个无限的空间~
+- 本库封装了对蓝奏云的基本操作: 登录、列出文件、下载文件、上传文件、删除文件(夹)、
+清空回收站、恢复文件、创建文件夹、设置文件(夹)访问密码
+- 此外，通过伪装后缀名，解决了蓝奏云的上传格式限制。
+通过分卷上传，解决了单文件最大 100MB 的限制
 
-当然，本项目也存在诸多不足，可能还有有些bug，你就当作彩蛋吧(滑稽)，后面会继续维护的，欢迎吐槽和star
+- 如果有任何问题或建议，欢迎提 issue。最后，求一个 star (≧∇≦)ﾉ
 
-# API食用文档
-
-> 安装依赖库
+# 安装依赖库
 ```
-pip install requests
+pip install requests requests_toolbelt
 ```
 
-> 导入本api模块
-```
-import lanzou.py
-```
-
-> 创建一个网盘对象
-```
-lzy = LanZouCloud()
-```
-
-
-接下来就可以通过一系列方法操作网盘了
+# API 文档
 
 ### `.login(username, passwd)`  
-> 登录到蓝奏云  
+> 登录蓝奏云  
 
-**参数说明**:`username`为用户名,`passwd`为登录密码  
-**异常处理**:密码错误抛出`PasswdError`
-```
-import lanzou.py
+|参数|类型|说明|必填|  
+|---|:-:|:-:|:-:|:-:|
+|username|str|用户名|Y|
+|passwd|str|登录密码|Y|
+
+示例 : 
+```python
+from api.lanzou import LanZouCloud
 
 lzy = LanZouCloud()
-lzy.login("12345", "abc")
+status = lzy.login('username', 'passwd')
+print(status)
 ```
 
+返回值 : 登录成功返回 `True`,失败返回 `False`
 
-### `.list_dir(folder_id)`  
-> 列出某个文件夹下的子文件夹、文件、该文件夹的绝对路径列表 
-  
-**参数说明**:`folder_id`为文件夹id,id为`-1`表示根目录(可选,默认-1)  
-**返回值**:
+---
+
+### `.get_dir_list(folder_id)`  
+> 获取子文件夹名-id列表
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|folder_id|int|文件夹id|N|默认`-1`(根目录)|
+
+示例 :
+```python
+# 列出 id 为 1037070 的文件夹的子文件夹
+sub_dirs = lzy.get_dir_list(1037070)
+print(sub_dirs)
 ```
+
+返回值：
+```python
 {
-    'folder_list': {'子文件夹1': 'id', ...}, 
-    'file_list': {'文件1': 'id', ...},
-    'path_list': {'根目录': '-1', '父文件夹': 'id', ...}
+    "娱乐": 1037080,
+    "科幻": 1037083,
+    "纪录片": 1037084,
+    "游戏改": 1037085
 }
 ```
 
-`folder_list`中包含了所有子文件夹的name-id键值对  
-`file_list`中包含了所有文件的name-id键值对  
-`path_list`是该文件夹的上级路径的name-id键值对,一直回溯到根目录  
+---
 
-```
-result = lzy.list_dir(797038)
-print("打印文件夹下的所有文件及其id")
-for k,v in result["file_list"].items():
-    print("文件名:{}   ID:{}".format(k,v))
-``` 
+### `.get_file_list(folder_id)`  
+> 获取文件详细信息列表
 
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|folder_id|int|文件夹id|N|默认`-1`(根目录)|
 
-### `.upload(file_path, folder_id)`  
-> 上传文件到网盘的指定文件夹  
-
-**参数说明**:`file_path`为本地文件的***完整路径***,`folder_id`为网盘中目标文件夹的id,
-id为`-1`表示上传到网盘根目录(可选,默认-1)  
-**返回值**:`{'file_name': 文件名(不含路径) , 'file_id': 该文件在网盘的id, 'share_url': 分享链接}`    
-**异常处理**:发生异常时抛出`UploadError` 
-```
-# 上传D:\test\123.zip到网盘中id为23333的文件夹
-
-result = lzy.upload(r"D:\test\123.zip", 23333)
-print("分享链接" + result["share_url"])
+示例 :
+```python
+file_list = lzy.get_file_list(1037070)
+print(file_list)
 ```
 
-
-### `.upload2(file_path, folder_id)`  
-> 强化版upload,大文件自动拆分上传,生成种子文件
-
-**参数说明**:`file_path`为本地文件完整路径,`folder_id`为蓝奏云目标文件夹的id,id为`-1`表示根目录 (可选,默认-1)  
-**返回值**:返回结果格式同upload,小于100MB的文件直接返回文件信息,大文件拆分上传后返回种子文件的信息  
-**其它**:上传并没有使用多线程，因为在多次测试中发现多线程上传总有文件会出错，而且上传速度没有明显加快  
-种子文件指的是，包含所有分段文件分享链接的txt文本。类似分卷压缩的原理，对于超过100MB的文件，会自动切段，然后
-上传，最后把所有分段文件的信息保存到一个txt文本文件，我称之为“种子文件”。download方法拿到这个“种子文件”，会下载所有
-分段文件，然后自动合并，借此解决大文件无法上传的问题。
-
-
-
-### `.download(share_url, save_path, pwd):`  
-> 下载文件/下载种子文件
-  
-**参数说明**:`share_url`为蓝奏云分享链接,`save_path`为本地保存路径(不存在自动创建，默认当前路径),
-           `pwd`为访问密码(默认为空)  
-**异常处理**:出错时抛出`DownloadError`  
-**其它**:本方法无需登录即可调用  
-  
-  
-  
-### `.mkdir(parent_id, folder_name, folder_description)`  
-> 在网盘创建文件夹  
-
-**参数说明**:`parent_id`为目标文件夹的父文件夹id,`folder_name`为文件夹名称,
-`folder_description`为文件夹描述文本(可选,默认为空)  
-**返回值**:创建成功返回文件夹`id`,失败返回`None`  
-**其它**:即使蓝奏云支持创建同名文件夹，但是十分不建议你这么做，这会导致mkdir无法正确返回文件夹id
-
-```
-# 在id为233333的文件夹下创建名为“music”的文件夹，并设置描述为“音乐分享”
-
-folder_id = lzy.mkdir(233333, "music", "音乐分享")
-print("文件夹id为:" + folder_id)
+返回值 : 
+```python
+[
+    {
+        "id": 12741016,     # 文件 id
+        "name": "Valentin - A Little Story.mp3",    # 文件名
+        "time": "昨天15:27",      # 上传时间
+        "size": "8.0 M",    # 文件大小
+        "downs": 6,         # 下载次数
+        "has_pwd": False, # 是否设置提取码
+        "has_des": True   # 是否设置描述
+    },
+    {
+        "id": 12740874,
+        "name": "小清水亜美 - 玻璃の空.mp3",
+        "time": "昨天15:24",
+        "size": "10.7 M",
+        "downs": 0,
+        "has_pwd": False,
+        "has_des": False
+    }
+]
 ```
 
+---
 
+### `.get_file_list2(folder_id)`  
+> 获取子文件名-id列表
 
-### `.delete(id)`  
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|folder_id|int|文件夹id|N|默认`-1`(根目录)|
+
+示例 :
+```python
+file_list = lzy.get_file_list2(1037070)
+print(file_list)
+```
+
+返回值 : 
+```python
+{
+    "Valentin - A Little Story.mp3": 12741016,
+    "小清水亜美 - 玻璃の空.mp3": 12740874
+}
+```
+
+---
+
+### `.get_full_path(folder_id)`  
+> 获取文件夹绝对路径
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|folder_id|int|文件夹id|N|默认`-1`(根目录)|
+
+示例 : 
+```python
+# 路径: /视频/电影/娱乐     "娱乐"文件夹 id 为 1037080
+full_path = lzy.get_full_path(1037080)
+print(full_path)
+```
+
+返回值 : 
+```python
+{
+    "LanZouCloud": -1,
+    "视频": 1033205,
+    "电影": 1037070,
+    "娱乐": 1037080
+}
+```
+
+---
+
+### `.delete(fid)`  
 > 把网盘的文件(夹)放到回收站
 
-**参数说明**:`id`为文件或者文件夹的id,目前文件夹id为6位,
-文件id为7位,而且它们都快进位了,这个长度以后可能要修改（代码第37行）  
-**返回值**:删除成功返回`True`,失败返回`False`  
-**其它**:无法删除***含有子文件夹的文件夹***,含有文件也可以删除
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|fid|int|文件(夹)id|Y|-|
+
+示例 : 
+```python
+status = lzy.delete(12741016)
+print(status)
 ```
-# 删除id为233333的文件夹(6位数)
+返回值 : 删除成功返回`True`,失败返回`False`  
 
-lzy.delete(233333)
+注 : 
+
+- 无法删除**含有子文件夹的文件夹**,但含有文件的可以删除。
+- 重复删除同一个 id 仍返回 `True`
+- 删除不存在的 id 也返回 `True`
+- 这都是蓝奏云的锅，与我无关 :(
+
+---
+
+### `.move_file(file_id, folder_id)`
+> 移动文件到指定文件夹
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|file_id|int|文件id|Y|-|
+|folder_id|int|文件夹id|N|默认`-1`(根目录)|
+
+示例 : 
+```python
+# 把 id=12741016 的文件移动到 id=1037083 的文件夹
+status = lzy.move_file(12741016, 1037083)
+print(status)
+```
+返回值 : 移动成功返回 `True`,失败返回 `False`  
+
+---
+
+### `.upload(file_path, folder_id, call_back)`  
+> 上传文件到网盘的指定文件夹  
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|file_path|str|本地文件路径|Y|使用绝对路径|
+|folder_id|int|网盘文件夹id|N|默认`-1`(根目录)|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 上传成功返回 `True`,失败返回 `False`
+
+注意 : 上传一个网盘中已经存在的文件，默认执行覆盖操作
+
+回调函数 : 该函数用于跟踪上传进度  
+|参数|类型|说明|
+|:-:|:-:|:-:|:-:|
+|file_name|str|上传文件名|
+|total_size|int|文件总字节数|
+|now_size|int|已上传字节数|
+  
+
+示例:
+```python
+# 编写显示上传进度条的回调函数
+def show_progress(file_name, total_size, now_size):
+    percent = now_size / total_size
+    bar_len = 40            # 进度条长总度
+    now_size /= 1048576     # Bytes to MB
+    total_size /= 1048576
+    bar_str = '>' * int(bar_len * percent) + '=' * int(bar_len * (1 - percent))
+    sys.stdout.write('{} [{}] {:.2f}% ({:.1f}/{:.1f}MB) \r'.format(
+        file_name, bar_str, percent * 100, now_size, total_size))
+
+# 上传 D:\test\123.zip 到网盘中 id 为 233333 的文件夹
+if lzy.upload(r"D:\test\123.zip", 233333, show_progress):
+    print('上传成功')
+else:
+    print('上传失败')
 ```
 
+结果 : 
+```
+123.zip [>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>====] 87.72% (39.9/45.5MB)
 
-### `.recovery(id):`  
+```
+
+---
+
+### `.upload2(file_path, folder_id, call_back)`  
+> 强化版 upload，解除单文件 100MB 大小限制
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|file_path|str|本地文件路径|Y|使用绝对路径|
+|folder_id|int|网盘文件夹id|N|默认`-1`(根目录)|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 
+- 上传成功返回 `LanZouCloud.SUCCESS` 
+- 上传失败返回 `LanZouCloud.FAILED`
+- 压缩过程异常返回 `LanZouCloud.ZIP_ERROR`  
+
+注意 : 
+- 连续多文件上传的极限是 80 MB/个,所以分卷大小为 80 MB
+- 上传大文件会自动在网盘创建文件夹以保存分卷
+- 重复上传默认执行覆盖操作
+
+回调函数 : 同 `.upload()`
+
+---
+
+### `.download_file(share_url, pwd, save_path, call_back):`  
+> 通过分享链接下载文件
+  
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|share_url|str|文件分享链接|Y|-|
+|pwd|str|提取码|N|默认空|
+|save_path|str|文件保存路径|N|默认当前路径|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 下载成功返回 `True`,下载失败返回 `False`
+
+示例 : 
+```python
+# 编写显示上传进度条的回调函数
+def show_progress(file_name, total_size, now_size):
+    percent = now_size / total_size
+    bar_len = 40            # 进度条长总度
+    now_size /= 1048576     # Bytes to MB
+    total_size /= 1048576
+    bar_str = '>' * int(bar_len * percent) + '=' * int(bar_len * (1 - percent))
+    sys.stdout.write('{} [{}] {:.2f}% ({:.1f}/{:.1f}MB) \r'.format(
+        file_name, bar_str, percent * 100, now_size, total_size))
+
+# 下载文件到默认路径
+lzy.download_file('https://www.lanzous.com/i6q0fli', '6666', call_back=show_progress)
+```
+
+结果 :
+```
+Git-2.23.0-64-bit.exe [>>>>>>>>>>>>>>>>>>>>>>>>>>>>===========] 71.63% (32.6/45.5MB)
+```
+---
+### `.download_file2(fid, save_path, call_back):`  
+> 登录用户通过id下载文件
+  
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|fid|int|文件id|Y|-|
+|save_path|str|文件保存路径|N|默认当前路径|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 下载成功返回 `True`,下载失败返回 `False`
+
+回调函数 : 同 `.download_file()`
+
+---
+### `.mkdir(parent_id, folder_name, description)`  
+> 在网盘创建文件夹  
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|parent_id|int|父文件夹id|Y|`-1` 表根目录|
+|folder_name|str|文件夹名|Y|自动删除非法字符|
+|description|str|文件夹描述|N|默认无|
+
+示例 : 
+```python
+code = lzy.mkdir(-1, 'my_music', '音乐分享')
+if code != LanZouCloud.MKDIR_ERROR:
+    print('文件夹id:' + str(code))
+```
+
+返回值 : 
+- 创建成功返回文件夹 `id`
+- 目标已存在返回文件夹 `id`
+- 创建失败返回 `LanZouCloud.MKDIR_ERROR`
+
+注意 : 蓝奏云支持创建 **同名文件夹** ，但本方法会阻止这种操作，以防出现混淆
+
+---
+
+### `.rename_dir(folder_id, folder_name, description)`  
+> 重命名文件夹(和描述)  
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|folder_id|int|文件夹id|N|默认`-1`(根目录)|
+|folder_name|str|文件夹名|Y|非法字符自动删除|
+|description|str|文件夹描述|N|默认无|
+
+示例 : 
+```python
+status = lzy.rename_dir(1037070, 'soft-music', '轻音乐分享')
+print(code)
+```
+
+返回值 : 重命名成功返回 `True` ,失败或异常返回 `False`
+
+---
+
+### `.list_recovery()`  
+> 列出回收站文件(夹)
+
+示例 :
+```python
+deleted_files = lzy.list_recovery()
+print(deleted_files)
+```
+
+返回值 :
+```python
+{
+    "folder_list": {
+        "杂物": "1037324",
+        "相册": "1037324"
+    },
+    "file_list": {
+        "java模拟器.zip": "1037324",
+        "Valentin - A Little Story.mp3": "12741016",
+        "小清水亜美 - 玻璃の空.mp3": "12740874"
+    }
+}
+```
+
+---
+
+### `.recovery(fid)`  
 > 从回收站恢复文件（夹）
 
-**参数说明**:`id`为文件或者文件夹的id  
-**返回值**:恢复成功返回`True`,失败返回`False`
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|fid|int|文件(夹)id|Y|-|
 
+示例 : 
+```python
+status = lzy.recovery(12741016)
+print(status)
+```
 
+返回值 : 恢复成功返回 `True` ,失败或异常返回 `False`
+
+---
 
 ### `.clean_recycle()`  
 > 清空回收站
 
-**返回值**:清空成功返回`True`,失败返回`False`
-
-
-
-### `.parse(url, pwd)`  
-> 解析蓝奏云分享链接
-
-**参数说明**:`url`为蓝奏云分享链接,`pwd`为文件分享密码(可选,默认为空)  
-**返回值**:
+示例 :
+```python
+status = lzy.clean_recycle()
+print(status)
 ```
+
+返回值 : 清空成功返回 `True` ,失败或异常返回 `False`
+
+---
+
+### `.get_share_info(fid)`  
+> 获取文件(夹)分享信息
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|fid|int|文件(夹)id|Y|-|
+
+返回值 : 
+```python
 {
-    'file_name': 文件名,
-    'file_size': 文件大小,
-    'upload_time': 文件上传时间,
-    'file_id': 文件id,
-    'share_url': 文件分享链接,
-    'direct_url': 文件下载直链
+    "code": 0,      # 状态码
+    "share_url": "https://www.lanzous.com/i6q0fli",    # 分享链接
+    "passwd": "6666"          # 提取码
 }
-```  
-**异常处理**:解析异常时抛出`ParseError`错误,分享密码错误时抛出`PasswdError`错误,其它情况抛出`LanZouCloudError`,
-异常中带有详细的错误信息
-```
-try:
-    result = lzy.parse('https://www.lanzous.com/i4vdvla', '1234')
-except (PasswdError,ParseError) as e:
-    print(e)
-
-print("直链:" + result["direct_url"])
 ```
 
+状态码 code:  
+- 获取成功 : `LanZouCloud.SUCCESS`
+- 获取失败 : `LanZouCloud.FAILED`
+- fid参数错误 : `LanZouCloud.ID_ERROR`
 
-### `.set_passwd(id, passwd)`  
-> 设置文件(夹)访问密码
-   
-**参数说明**:`id`为文件或者文件夹的id,`passwd`表示访问密码,`-1`表示关闭密码(可选,默认关闭)  
-**返回值**:设置成功返回`True`,失败返回`False`  
+示例 :
+```python
+info = lzy.get_share_info(1033203)
 
-### `.get_share_url(id)`  
-> 通过id返回文件(夹)分享链接
-   
-**参数说明**:`id`为文件的id(目前是8位数字) 或者文件夹的id(目前6位)  
-**返回值**:成功返回链接字符串，失败返回空字符串
+if info['code'] == LanZouCloud.SUCCESS:
+    print('分享链接:' + info['share_url'])
+```
+
+---
+
+### `.set_share_passwd(fid, passwd)`  
+> 设置文件(夹)分享密码
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|fid|int|文件(夹)id|Y|-|
+|passwd|str|分享密码|N|2-6个字符,默认空(无密码)|
+
+示例 :
+```python
+status = lzy.set_share_info(1033203, 'fuck')
+print(status)
+```
+
+返回值 : 设置成功返回 `True` ,失败返回 `False`  
+
+---
+
+### `.get_direct_url(share_url, pwd)`  
+> 获取文件下载直链
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|share_url|str|文件分享链接|Y|-|
+|pwd|str|提取码|N|默认空|
+
+返回值 : 
+```python
+{
+    "code": 0,
+    "name": "Git-2.23.0-64-bit.exe",
+    "direct_url": "https://development5.baidupan.com/100420bb/2019/10/03/41c4117570de8c0ce02d7e7ddc838135.mp3?st=o22S3uwv063cbklsDWh50w&e=1570193627&b=CAwBYFA8UzNXbAclADkAagN2WisNLAVCUSIBQFM9B3FTdQ5iUDVYfVVTVHYEOwF3VXkAcgFtA3VSMg_c_c&fi=12741016&up="
+}
+```
+状态码 code :  
+- 获取成功 : `LanZouCloud.SUCCESS`
+- 分享链接非法 : `LanZouCloud.URL_INVALID`
+- 缺少提取码 : `LanZouCloud.LACK_PASSWORD`
+- 提取码错误 : `LanZouCloud.PASSWORD_ERROR`
+- 文件已取消 : `LanZouCloud.FILE_CANCELLED`
+
+示例 :
+```python
+info = lzy.get_direct_url('https://www.lanzous.com/i6k203g', '6666')
+
+if info['code'] == LanZouCloud.SUCCESS:
+    print('直链地址:' + info['direct_url'])
+elif info['code'] == LanZouCloud.LACK_PASSWD:
+    print('缺少提取码')
+```
+
+注意 : 
+- 本方法会检查分享链接合法性
+- 直链有效期约 30 分钟
+
+---
+### `.get_direct_url2(fid)`  
+> 通过id获取文件下载直链
+
+|参数|类型|说明|必填|备注|  
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|fid|int|文件id|Y|-|
+
+返回值 :  同 `.get_direct_url()`
+
+注意 : 登录后才能通过 id 获取直链，此时无需提取码
+

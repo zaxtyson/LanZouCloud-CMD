@@ -1,346 +1,295 @@
-import json
 import os
 import re
+from shutil import rmtree
+from time import sleep
+
 import requests
-from requests_toolbelt.multipart.encoder import MultipartEncoder
-
-
-class LanZouCloudError(Exception):
-    """蓝奏云异常基类"""
-
-    def __init__(self, msg=''):
-        self.msg = msg
-
-
-class GetFileInfoError(LanZouCloudError):
-    """获取文件信息失败引发的错误"""
-    pass
-
-
-class ParseError(LanZouCloudError):
-    """解析直链时时引发的错误"""
-    pass
-
-
-class PasswdError(LanZouCloudError):
-    """密码错误引发的异常"""
-    pass
-
-
-class UploadError(LanZouCloudError):
-    """上传文件时引发的异常"""
-    pass
-
-
-class DownloadError(LanZouCloudError):
-    """下载过程中引发的异常"""
-    pass
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 
 
 class LanZouCloud(object):
+    FAILED = -1
+    SUCCESS = 0
+    ID_ERROR = 1
+    PASSWORD_ERROR = 2
+    LACK_PASSWORD = 3
+    ZIP_ERROR = 4
+    MKDIR_ERROR = 5
+    DIR_EXIST = 6
+    URL_INVALID = 7
+    NETWORK_ERROR = 8
+    FILE_CANCELLED = 9
+
     def __init__(self):
-        self._file_id_length = 8  # 目前文件id长度
-        self._seed_file_suffix = '.seed.txt'  # 种子文件后缀
-        self._guise_suffix = '.dll'  # 不支持的文件伪装后缀
         self._session = requests.session()
-        self.header_pc = {
+        self._file_id_length = 8  # 目前文件id长度
+        self._guise_suffix = '.dll'  # 不支持的文件伪装后缀
+        self._timeout = 2000  # 每个请求的超时 ms
+        self._volume_size = 80  # 大文件分卷大小 MB
+        self._host_url = 'https://www.lanzous.com'
+        self._doupload_url = 'https://pc.woozooo.com/doupload.php'
+        self._account_url = 'https://pc.woozooo.com/account.php'
+        self._mydisk_url = 'https://pc.woozooo.com/mydisk.php'
+        self._headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
-            'Referer': 'https://www.lanzous.com',
-            'Accept-Language': 'zh-CN,zh;q=0.9',
+            'Referer': self._host_url,
+            'Accept-Language': 'zh-CN,zh;q=0.9',  # 提取直连必需设置这个
         }
-        self.header_phone = {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Mobile Safari/537.36',
-            'Referer': 'https://www.lanzous.com',
-            'Accept-Language': 'zh-CN,zh;q=0.9',
-        }
+
+    def _get(self, url, **kwargs):
+        return self._session.get(url=url, headers=self._headers, timeout=self._timeout, **kwargs)
+
+    def _post(self, url, data, **kwargs):
+        return self._session.post(url=url, data=data, headers=self._headers, timeout=self._timeout, **kwargs)
+
+    def _is_file_url(self, share_url):
+        """判断是否文件的分享链接"""
+        pat = 'https?://www.lanzous.com/[a-z0-9]{7}/?'
+        return True if re.fullmatch(pat, share_url) else False
 
     def login(self, username, passwd):
         """登录蓝奏云控制台"""
-        login_data = {
-            "action": "login",
-            "task": "login",
-            "ref": "https://up.woozooo.com/",
-            "formhash": "0af1aa15",
-            "username": str(username),
-            "password": str(passwd),
-        }
-
-        html = self._session.post('https://pc.woozooo.com/account.php', data=login_data,
-                                  headers=self.header_pc).text  # 登录
-        if '登录成功' not in html:
-            raise PasswdError("用户名或登录密码错误")
-
-    def delete(self, id):
-        """
-        把网盘的文件(夹)放到回收站(不能包含子文件夹)
-        :param id: 文件的id或者文件夹id
-        :return: True or False
-        """
-        delete_file = {'task': 6, 'file_id': id}
-        delete_folder = {'task': 3, 'folder_id': id}
-
-        # 目前文件夹id为6位，文件id为8位
-        if len(str(id)) >= self._file_id_length:
-            post_data = delete_file
-        else:
-            post_data = delete_folder
+        login_data = {"action": "login", "task": "login", "username": username,
+                      "password": passwd}
         try:
-            result = self._session.post('https://pc.woozooo.com/doupload.php', data=post_data,
-                                        headers=self.header_pc).json()
-        except Exception:
+            index = self._get(self._account_url).text
+            login_data['formhash'] = re.findall(r'name="formhash" value="(.+?)"', index)[0]
+            html = self._post(self._account_url, login_data).text
+            return True if '登录成功' in html else False
+        except requests.RequestException:
             return False
 
-        if result["zt"] != 1:
-            return False
+    def delete(self, fid):
+        """把网盘的文件、无子文件夹的文件夹放到回收站"""
+        if len(str(fid)) >= self._file_id_length:
+            post_data = {'task': 6, 'file_id': fid}
         else:
-            return True
-
-    def recovery(self, id):
-        """
-        从回收站恢复文件
-        :param id: 文件或文件夹id
-        :return: True or False
-        """
-        post_data = {
-            "action": "files",
-            "formhash": "efdd6f6f",
-            "fl_sel_ids[]": id,
-            "task": "restore_recycle"
-        }
-        result = self._session.post('https://pc.woozooo.com/mydisk.php?item=recycle', data=post_data,
-                                    headers=self.header_pc).text
-        if '恢复成功' in result:
-            return True
-        else:
+            post_data = {'task': 3, 'folder_id': fid}
+        try:
+            result = self._post(self._doupload_url, post_data).json()
+            return True if result['zt'] == 1 else False
+        except requests.RequestException:
             return False
 
-    def list_dir(self, folder_id=-1) -> dict:
-        """
-        获取文件列表
-        :param folder_id: 文件夹id
-        :return: 当前目录下的文件夹列表，文件列表，回溯路径列表
-        """
+    def clean_recycle(self):
+        """清空回收站"""
+        post_data = {'action': 'delete_all', 'task': 'delete_all'}
+        try:
+            index = self._get(self._mydisk_url, params={'item': 'recycle', 'action': 'files'}).text
+            post_data['formhash'] = re.findall(r'name="formhash" value="(.+?)"', index)[0]  # 设置表单 hash
+            result = self._post(self._mydisk_url + '?item=recycle', post_data).text
+            return True if '清空回收站成功' in result else False
+        except (requests.RequestException, IndexError):
+            return False
+
+    def list_recovery(self):
+        """获取回收站文件列表"""
+        try:
+            html = self._get(self._mydisk_url, params={'item': 'recycle', 'action': 'files'}).text
+            dirs = re.findall(r'folder_id=(\d+).*?images/folder.*?>(?:&nbsp;)?(.*?)</a>', html, re.DOTALL)
+            dirs = {k: v for v, k in dirs}
+            files = re.findall(r'value="(\d+)".*?/images/file.*?>\s(.*?)</a>', html, re.DOTALL)
+            files = {k: v for v, k in files}
+            return {'folder_list': dirs, 'file_list': files}
+        except (requests.RequestException, re.error):
+            return {'folder_list': {}, 'file_list': {}}
+
+    def recovery(self, fid):
+        """从回收站恢复文件"""
+        if len(str(fid)) >= self._file_id_length:
+            para = {'item': 'recycle', 'action': 'file_restore', 'file_id': fid}
+            post_data = {'action': 'file_restore', 'task': 'file_restore', 'file_id': fid}
+        else:
+            para = {'item': 'recycle', 'action': 'folder_restore', 'folder_id': fid}
+            post_data = {'action': 'folder_restore', 'task': 'folder_restore', 'folder_id': fid}
+        try:
+            index = self._get(self._mydisk_url, params=para).text
+            post_data['formhash'] = re.findall(r'name="formhash" value="(.+?)"', index)[0]  # 设置表单 hash
+            result = self._post(self._mydisk_url + '?item=recycle', post_data).text
+            return True if '恢复成功' in result else False
+        except (IndexError, requests.RequestException):
+            return False
+
+    def get_file_list(self, folder_id=-1):
+        """获取文件列表"""
         page = 1
-        file_list = {}
-        folder_id = int(folder_id)
+        file_list = []
         while True:
-            post_data = dict(task=5, folder_id=folder_id, pg=page, headers=self.header_pc)  # 通过POST拿到分页的文件列表
-            r = self._session.post('https://pc.woozooo.com/doupload.php', data=post_data).json()
-            if r["info"] == 1:  # 该页有文件
-                for file in r["text"]:
-                    file_list[file["name_all"]] = file["id"]
-            else:
-                break
+            post_data = {'task': 5, 'folder_id': folder_id, 'pg': page}
+            result = self._post(self._doupload_url, post_data).json()
+            if result["info"] != 1: break  # 已经拿到全部文件的信息
+            for i in result["text"]:
+                file_list.append({
+                    'id': int(i['id']),
+                    'name': i['name_all'],
+                    'time': i['time'],  # 上传时间
+                    'size': i['size'],  # 文件大小
+                    'downs': int(i['downs']),  # 下载次数
+                    'has_pwd': True if int(i['onof']) == 1 else False,  # 是否存在提取码
+                    'has_des': True if int(i['is_des']) == 1 else False  # 是否存在描述
+                })
             page += 1
-        # 文件夹的id直接从html中提取
-        html = self._session.get(
-            'https://pc.woozooo.com/mydisk.php?item=files&action=index&folder_id=' + str(folder_id),
-            headers=self.header_pc).text
-        folder_list = re.findall(r'&nbsp;(.+?)</a>&nbsp;.+folkey\((.+?)\)', html)
-        folder_list = dict(folder_list)
-        # 获取文件夹完整路径信息及其id
-        path = re.findall(r'&raquo;&nbsp;.+folder_id=([0-9]+)">.+&nbsp;(.+?)</a>', html)
-        path_list = {'根目录': '-1'}
-        for i in path:
-            path_list[i[1]] = i[0]
-        # 获取当前文件夹名称
-        if folder_id != -1:
-            current_folder = re.findall(r'&raquo;&nbsp;.+&nbsp;(.+) <font', html)[0]
-            path_list[current_folder] = folder_id
-        # {'folder_list': {'子文件夹': 'id', ...}, 'file_list': {'文件': 'id', ...},
-        #                                       'path_list': {'根目录': '-1', '父文件夹': 'id', ...}}
-        return dict(folder_list=folder_list, file_list=file_list, path_list=path_list)
+        return file_list
 
-    def mkdir(self, parent_id, folder_name, folder_description=''):
-        """
-        再网盘上面新建文件夹
-        :param parent_id: 父文件夹的id(默认-1，根目录)
-        :param folder_name: 文件夹名
-        :param folder_description: 文件夹描述
-        :return: folder_id
-        """
-        folder_name = re.sub('[#\$%\^\*<>\+=`\'"/:;,\?]', '', folder_name)  # 去除非法字符
+    def get_file_list2(self, folder_id=-1):
+        """获取文件名-id列表"""
+        return {i['name']: i['id'] for i in self.get_file_list(folder_id)}
+
+    def get_dir_list(self, folder_id=-1):
+        """获取子文件夹列表"""
+        folder_list = {}
+        try:
+            html = self._get(self._mydisk_url, params={'item': 'files', 'action': 'index', 'folder_id': folder_id}).text
+            for k, v in re.findall(r'&nbsp;(.+?)</a>&nbsp;.+folkey\((.+?)\)', html):
+                folder_list[k] = int(v)  # 文件夹名 : id
+            return folder_list
+        except requests.RequestException:
+            return folder_list
+
+    def get_full_path(self, folder_id=-1):
+        """获取文件夹完整路径"""
+        path_list = {'LanZouCloud': -1}
+        try:
+            html = self._get(self._mydisk_url, params={'item': 'files', 'action': 'index', 'folder_id': folder_id}).text
+            path = re.findall(r'&raquo;&nbsp;.+folder_id=([0-9]+)">.+&nbsp;(.+?)</a>', html)
+            for i in path:
+                path_list[i[1]] = int(i[0])
+        # 获取当前文件夹名称
+            if folder_id != -1:
+                current_folder = re.findall(r'&raquo;&nbsp;.+&nbsp;(.+) <font', html)[0]
+                path_list[current_folder] = folder_id
+            return path_list
+        except (requests.RequestException, re.error, IndexError):
+            return path_list
+
+    def get_direct_url(self, share_url, pwd=''):
+        """获取直链"""
+        if not self._is_file_url(share_url):
+            return {'code': LanZouCloud.URL_INVALID, 'name': '', 'direct_url': ''}
+
+        html = self._get(share_url).text
+        if '文件取消' in html:
+            return {'code': LanZouCloud.FILE_CANCELLED, 'name': '', 'direct_url': ''}
+
+        # 获取下载直链重定向前的链接
+        if '输入密码' in html:  # 文件设置了提取码时
+            if len(pwd) == 0:
+                return {'code': LanZouCloud.LACK_PASSWORD, 'name': '', 'direct_url': ''}
+            post_str = re.findall(r'data\s:\s\'(.*)\'', html)[0] + str(pwd)  # action=downprocess&sign=xxxxx&p=
+            post_data = {}
+            for i in post_str.split('&'):  # 转换成 dict
+                k, v = i.split('=')
+                post_data[k] = v
+            link_info = self._post(self._host_url + '/ajaxm.php', post_data).json()
+        else:  # 无提取码时
+            para = re.findall(r'<iframe.*?src="(.*?)".*?>', html)[1]  # 提取构造下载页面链接所需的参数
+            file_name = re.findall(r'<div class="b">(.*?)</div>', html)[0]
+            html = self._get(self._host_url + para).text
+            post_data = re.findall(r'data\s:\s(.*),', html)[0]  # {'action': 'downprocess', 'sign': 'xxxxx'}
+            post_data = eval(post_data)
+            link_info = self._post(self._host_url + '/ajaxm.php', post_data).json()
+            link_info['inf'] = file_name  # 无提取码时 inf 字段为 0，有提取码时该字段为文件名
+        # 获取文件直链
+        if link_info['zt'] == 1:
+            fake_url = link_info['dom'] + '/file/' + link_info['url']  # 假直连，存在流量异常检测
+            direct_url = self._get(fake_url, allow_redirects=False).headers['Location']  # 重定向后的真直链
+            return {'code': LanZouCloud.SUCCESS, 'name': link_info['inf'], 'direct_url': direct_url}
+        else:
+            return {'code': LanZouCloud.PASSWORD_ERROR, 'name': '', 'direct_url': ''}
+
+    def get_direct_url2(self, fid):
+        """登录用户通过id获取直链"""
+        info = self.get_share_info(fid)
+        return self.get_direct_url(info['share_url'], info['passwd'])
+
+    def get_share_info(self, fid):
+        """获取文件(夹)提取码、分享链接"""
+        if len(str(fid)) >= self._file_id_length:
+            post_data = {'task': 22, 'file_id': fid}
+        else:
+            post_data = {'task': 18, 'folder_id': fid}
+        try:
+            result = self._post(self._doupload_url, post_data).json()
+            f_info = result['info']
+            # id 有效性校验
+            if ('f_id' in f_info.keys() and f_info['f_id'] == 'i') or ('name' in f_info.keys() and not f_info['name']):
+                return {'code': LanZouCloud.ID_ERROR, 'share_url': '', 'passwd': ''}
+            # onof=1 时，存在有效的提取码; onof=0 时不存在提取码，但是 pwd 字段还是有一个无效的随机密码
+            pwd = f_info['pwd'] if f_info['onof'] == '1' else ''
+            if 'f_id' in f_info.keys():
+                share_url = f_info['is_newd'] + '/' + f_info['f_id']  # 文件的分享链接需要拼凑
+            else:
+                share_url = f_info['new_url']  # 文件夹的分享链接可以直接拿到
+            return {'code': LanZouCloud.SUCCESS, 'share_url': share_url, 'passwd': pwd}
+        except requests.RequestException:
+            return {'code': LanZouCloud.FAILED, 'share_url': '', 'passwd': ''}  # 网络问题没拿到数据
+
+    def set_share_passwd(self, fid, passwd=''):
+        """设置网盘文件的提取码"""
+        passwd_status = 0 if passwd == '' else 1
+        if len(str(fid)) >= self._file_id_length:
+            post_data = {"task": 23, "file_id": fid, "shows": passwd_status, "shownames": passwd}
+        else:
+            post_data = {"task": 16, "folder_id": fid, "shows": passwd_status, "shownames": passwd}
+        try:
+            result = self._post(self._doupload_url, post_data).json()
+            return True if result['info'] == '设置成功' else False
+        except requests.RequestException:
+            return False
+
+    def mkdir(self, parent_id, folder_name, description=''):
+        """创建文件夹(同时设置描述)"""
+        folder_name = re.sub('[#\$%\^\*<>\+=`\'\"/:;,\?]', '', folder_name)  # 去除非法字符
         post_data = {
             "task": 2,
             "parent_id": parent_id or -1,
             "folder_name": folder_name,
-            "folder_description": folder_description
+            "folder_description": description
         }
-        result = self._session.post('https://pc.woozooo.com/doupload.php', data=post_data,
-                                    headers=self.header_pc, ).json()
-        if result["zt"] != 1:
-            return -1
-        else:
-            html = self._session.get(
-                'https://pc.woozooo.com/mydisk.php?item=files&action=index&folder_id=' + str(parent_id),
-                headers=self.header_pc, timeout=1000).text
-            folder_name = folder_name.replace('.', '\\.')  # 防止正则匹配到错误字符
-            folder_name = folder_name.replace('&', '&amp;')  # &符号到html里面转变为&amp;
-            try:
-                folder_id = re.findall(r'folder_id=([0-9]+)\".+&nbsp;{}</a>'.format(folder_name), html)[0]
-            except IndexError:
-                return -1
-            return int(folder_id)
-
-    def get_file_info(self, share_url) -> dict:
-        """
-        获取文件名，大小，上传时间
-        :param short_url:文件分享链接最后一段
-        :return:包含文件名，文件大小，上传时间的dict
-        """
-        response = requests.get(share_url, headers=self.header_phone)
+        dir_list = self.get_dir_list(parent_id)
+        if folder_name in dir_list.keys():
+            return dir_list[folder_name]
         try:
-            file_name = re.findall(r"<title>(.+) -", response.text)[0]  # 提取文件名，网页标题有
-            file_size = re.findall(r"<span class=\".+\">\( (.+) \)</span>", response.text)[0]  # 提取文件大小
-            upload_time = re.findall(r'</span>(.*?)\s*<span class="mt2">', response.text)[1]  # 提取文件上传时间
-            file_id = re.findall(r'href="/home/\?f=(\d{5,})&report', response.text)[0]  # 提取文件id
-            return {'file_name': file_name, 'file_size': file_size, 'upload_time': upload_time,
-                    'file_id': file_id, 'share_url': share_url}
-        except Exception as e:
-            raise GetFileInfoError("获取文件信息错误: {}".format(e))
+            result = self._post(self._doupload_url, post_data).json()
+            sleep(1.5)  # 暂停,等待蓝奏云网页端刷新数据
+            return self.get_dir_list(parent_id)[folder_name] if result["info"] == '创建成功' else LanZouCloud.MKDIR_ERROR
+        except requests.RequestException:
+            return LanZouCloud.MKDIR_ERROR
 
-    def parse(self, url, pwd='') -> dict:
-        """
-        解析蓝奏云链接返回文件信息和直链
-        :param url:蓝奏云分享链接
-        :param pwd:文件密码(默认为为空)
-        :return dict:文件名，大小，上传时间，直链
-        """
-        # 链接合法性检查，链接错误则引发UrlInvalidError异常
-        if not re.match('https://www\.lanzous\.com/[0-9a-z]{7,}.*', url):
-            raise LanZouCloudError("该分享链接有误:{}".format(url))
-
-        short_url = url.split('/')[3]  # 文件ID就是链接最后一段
-
-        if pwd:  # 如果存在访问密码，需要先拿到认证所需的参数
-
-            try:
-                response = requests.get('https://www.lanzous.com/tp/' + short_url, headers=self.header_phone)
-                para = re.findall(r"data : \'(.*)\'\+pwd", response.text)[0]
-                # 参数para是一个整个字符串，形如：action=downprocess&sign=XXXXXXXX&p=
-                data = {}
-                for item in para.split('&'):  # 先把para先拼凑成字典，方便后面发送POST请求
-                    tmp = item.split('=')
-                    data[tmp[0]] = tmp[1]
-                data['p'] = pwd  # 参数中p设置为访问密码
-            except Exception:
-                raise ParseError("提取直链参数时错误")
-
-            try:
-                # POST带参数请求 https://www.lanzous.com/ajaxm,php 来获取伪链
-                resp = requests.post('https://www.lanzous.com/ajaxm.php', headers=self.header_phone, data=data)
-                result = json.loads(resp.text)
-                temp_url = result['dom'] + '/file/' + result['url']  # 构造文件临时链接，后面需要它来找到直链
-                # GET请求临时链接，返回的response中Location字段暴露了文件的直链
-                response = requests.get(url=temp_url, headers=self.header_phone, data=data, allow_redirects=False)
-                file_info = self.get_file_info(url)  # 获取文件大小等信息
-                return {**file_info, 'direct_url': response.headers['Location']}
-            except Exception:
-                raise PasswdError("文件访问密码错误: {}".format(pwd))
-
-        else:  # 不存在密码时
-            # 直接GET请求 https://www.lanzous.com/tp/ID 提取直连，此时需要UA设置为手机，PC版无法提取此链接
-            # 手机端返回的html中有一段js暴露了服务器IP和相关参数
-            # <script type="text/javascript">
-            #     var urlpt = 'http://120.55.32.134/file/';   # 这个是IP
-            #     (function(document) {
-            #         var submit = document.getElementById('submit');
-            #         //var urlpt = 'http://120.55.32.134/file/';
-            #         submit.onfocus = submit.onmousedown = function() {
-            #         submit.href = urlpt + "XXXXXXXXXXX"  # 这个是参数
-            #     }})(document);
-            # </script>
-            try:
-                response = requests.get('https://www.lanzous.com/tp/' + short_url, headers=self.header_phone)
-                host = re.findall(r"var urlpt = \'(.+)\'", response.text)[0]
-                href = re.findall(r"submit.href = urlpt \+ \"(.+)\"", response.text)[0]
-
-                temp_url = host + href  # 构造临时链接，GET请求返回的response里面暴露直链
-                response = requests.get(temp_url, headers=self.header_phone, allow_redirects=False)
-                file_info = self.get_file_info(url)
-                return {**file_info, 'direct_url': response.headers['Location']}
-            except Exception:
-                raise ParseError("缺少访问密码或文件不存在")
-
-    def set_passwd(self, id, passwd=-1):
-        """
-        设置网盘文件的访问密码
-        :param id: 蓝奏云文件的id号
-        :param passwd: 要设置的访问密码,-1表示关闭密码
-        :return: True or false
-        """
-        if passwd == -1:  # -1则关闭密码
-            passwd_status = 0
-        else:
-            passwd_status = 1
-
-        # 目前文件夹id为位，文件id为8位
-        if len(str(id)) >= self._file_id_length:
-            post_data = {
-                "task": 23,
-                "file_id": id,
-                "shows": passwd_status,
-                "shownames": passwd
-            }
-        else:
-            post_data = {
-                "task": 16,
-                "folder_id": id,
-                "shows": passwd_status,
-                "shownames": passwd
-            }
-
+    def rename_dir(self, folder_id, folder_name, description=''):
+        """重命名文件夹"""
+        if len(str(folder_id)) >= self._file_id_length:
+            return False  # 文件名是不支持修改的
+        post_data = {'task': 4, 'folder_id': folder_id, 'folder_name': folder_name, 'folder_description': description}
         try:
-            result = self._session.post('https://pc.woozooo.com/doupload.php', data=post_data,
-                                        headers=self.header_pc).json()
-        except Exception:
+            result = self._post(self._doupload_url, post_data).json()
+            return True if result['info'] == '修改成功' else False
+        except requests.RequestException:
             return False
-        # 返回结果 {'zt': 1, 'info': '设置成功', 'text': 1}
-        # zt=1表示成功，但是顺便填一个不存在的file_id也不会出现错误提示，蓝奏云的bug
-        if result['zt'] != 1:
+
+    def move_file(self, file_id, folder_id=-1):
+        """移动文件到指定文件夹"""
+        post_data = {'task': 20, 'file_id': file_id, 'folder_id': folder_id}
+        try:
+            result = self._post(self._doupload_url, post_data).json()
+            return True if result['info'] == '移动成功' else False
+        except requests.RequestException:
             return False
-        else:
-            return True
 
-    def get_share_url(self, id):
-        """
-        通过id获取分享链接
-        :param file_id: 文件id
-        :return: 分享链接
-        """
-        if len(str(id)) >= self._file_id_length:  # 返回文件的分享链接
-            post_data = {
-                "task": 22,
-                "file_id": id
-            }
-            try:
-                result = self._session.post('https://pc.woozooo.com/doupload.php', data=post_data,
-                                            headers=self.header_pc).json()
-            except Exception:
-                return ''
-
-            if result['zt'] == 1:
-                return 'https://www.lanzous.com/' + result['info']['f_id']
-            else:
-                return ''
-        else:  # 返回文件夹分享链接
-            return 'https://www.lanzous.com/b{}/'.format(id)
-
-    def upload(self, file_path, folder_id=-1) -> dict:
-        """
-        上传文件到蓝奏云上指定的文件夹(默认根目录)
-        :param file_path: 本地文件地址
-        :param folder_id: 蓝奏云目标文件夹的ID
-        :return: 包含文件名、文件ID、分享链接的dict
-        """
+    def upload(self, file_path, folder_id=-1, call_back=None):
+        """上传文件到蓝奏云上指定的文件夹(默认根目录)"""
         file_name = os.path.basename(file_path)  # 从文件路径截取文件名
+        tmp_list = self.get_file_list2(folder_id)
+        if file_name in tmp_list.keys():
+            self.delete(tmp_list[file_name])  # 文件已经存在就删除
+
         suffix = file_name.split(".")[-1]
-        vaild_suffix_list = ['doc', 'docx', 'zip', 'rar', 'apk', 'ipa', 'txt', 'exe', '7z', 'e', 'z', 'ct',
+        valid_suffix_list = ['doc', 'docx', 'zip', 'rar', 'apk', 'ipa', 'txt', 'exe', '7z', 'e', 'z', 'ct',
                              'ke', 'cetrainer', 'db', 'tar', 'pdf', 'w3x', 'epub', 'mobi', 'azw', 'azw3',
                              'osk', 'osz', 'xpa', 'cpk', 'lua', 'jar', 'dmg', 'ppt', 'pptx', 'xls', 'xlsx',
                              'mp3', 'ipa', 'iso', 'img', 'gho', 'ttf', 'ttc', 'txf', 'dwg', 'bat', 'dll']
-        if suffix not in vaild_suffix_list:
-            # 不支持的文件修改后缀蒙混过关
+        if suffix not in valid_suffix_list:
+            # 不支持的文件通过修改后缀蒙混过关
             file_name = file_name + self._guise_suffix
 
         post_data = {
@@ -351,129 +300,77 @@ class LanZouCloud(object):
             "type": "application/octet-stream",
             "upload_file": (file_name, open(file_path, 'rb'), 'application/octet-stream')
         }
+
         post_data = MultipartEncoder(post_data)
-        upfile_header = self.header_pc.copy()  # 天坑！！复制不能直接赋值，结果导致全局headers异常,这里浅拷贝即可
-        upfile_header['Content-Type'] = post_data.content_type
-        result = self._session.post('http://pc.woozooo.com/fileup.php', data=post_data, headers=upfile_header).json()
-        # 处理上传返回的结果
-        if result["zt"] == 0:
-            raise UploadError('上传文件"{}"时发生错误: {}'.format(file_path, result["info"]))
-        file_id = result["text"][0]["id"]
-        short_url = result["text"][0]["f_id"]
-        file_name = result["text"][0]["name_all"]
-        share_url = 'https://www.lanzous.com/' + short_url
-        return {'file_name': file_name, 'file_id': file_id, 'share_url': share_url}
+        tmp_header = self._headers.copy()
+        tmp_header['Content-Type'] = post_data.content_type
 
-    def _split_file(self, file_path, block_size):
-        """
-        拆分大文件为若干个小文件
-        :param file_path: 文件路径
-        :param block_size: 单个小文件的大小(字节)
-        :return: 保存拆分文件的文件夹的完整路径 或者 原文件路径(不超过block_size时)
-        """
-        file_size = os.path.getsize(file_path)  # 文件字节数
-        real_path, file_name = os.path.split(file_path)  # 除去文件名以外的path，文件名
-        suffix = file_name.split('.')[-1]  # 文件后缀名
-        if file_size < block_size:
-            return file_path
-        else:
-            fp = open(file_path, 'rb')
-            count = file_size // block_size + 1
-            temp_dir = real_path + os.sep + file_name + '_split'
-            if not os.path.exists(temp_dir):
-                os.mkdir(temp_dir)
+        def _call_back(read_monitor):
+            call_back(file_name, read_monitor.len, read_monitor.bytes_read)
 
-            for i in range(1, count + 1):
-                name = temp_dir + os.sep + file_name.replace('.' + str(suffix), '[{}].{}'.format(i, suffix))
-                f = open(name, 'wb')
-                f.write(fp.read(block_size))
-            fp.close()
-            return temp_dir
-
-    def _merge_file(self, split_dir):
-        """
-        把若干个小文件合并为一个文件
-        :param split_dir: 存放被拆分文件的文件夹完整路径
-        :return:
-        """
-        # split_dir以_split结尾，删除即得到正式保存文件的路径
-        file_path = split_dir.replace('_split', '')  # 正式文件的完整路径
-        real_path, file_name = os.path.split(file_path)  # 除去文件名以外的path，文件名
-        fp = open(file_path, 'ab+')
-        for file in sorted(os.listdir(split_dir)):
-            f = open(split_dir + os.sep + file, 'rb')
-            fp.write(f.read())
-            f.close()
-        fp.close()
-        from shutil import rmtree
-        rmtree(split_dir)
-
-    def upload2(self, file_path, folder_id=-1) -> dict:
-        """
-        强化版upload，大文件自动拆分上传
-        :param file_path: 本地文件完整路径
-        :param folder_id: 蓝奏云目标文件夹的ID
-        :return: dict 单个文件的信息(小文件)，或者种子文件的信息(大文件)
-        """
-        max_size = 104857600  # 蓝奏云100MB限制
-        temp_dir = self._split_file(file_path, max_size)
-        if os.path.isfile(temp_dir):
-            return self.upload(temp_dir, folder_id)
-        elif os.path.isdir(temp_dir):
-            result_list = []
-            temp_folder_id = self.mkdir(folder_id, os.path.basename(file_path), '分段文件，请勿直接下载')
-            for file in sorted(os.listdir(temp_dir)):
-                up_file = temp_dir + os.sep + file
-                r = self.upload(up_file, temp_folder_id)
-                result_list.append(r)
-            from shutil import rmtree
-            rmtree(temp_dir)
-            # 把所有分段文件的信息写入txt文本，然后上传，之后返回的是这个txt的信息
-            # 通过下载这个txt文件（相当于一个种子文件），可以得到所有文件的信息，然后分别下载再合并，得到完整文件
-            save_name = os.path.basename(temp_dir).replace('_split', '.seed.txt')
-            f = open(save_name, 'w')
-            json.dump(result_list, f, ensure_ascii=False, indent=4)
-            f.close()
-            result = self.upload(save_name, folder_id)
-            os.remove(save_name)
-            return result
-
-    def clean_recycle(self):
-        """清空回收站"""
-        post_data = dict(action='delete_all', task='delete_all', formhash='efdd6f6f')
-        result = self._session.post('https://pc.woozooo.com/mydisk.php?item=recycle', headers=self.header_pc,
-                                    data=post_data)
-        if '清空回收站成功' in result.text:
+        monitor = MultipartEncoderMonitor(post_data, _call_back)
+        try:
+            result = self._session.post('http://pc.woozooo.com/fileup.php', data=monitor, headers=tmp_header).json()
+            if result["zt"] == 0: return False  # 上传失败
+            file_id = result["text"][0]["id"]
+            self.set_share_passwd(file_id)  # 上传时默认关闭提取码
             return True
-        else:
+        except (requests.RequestException, KeyboardInterrupt):
             return False
 
-    def download(self, share_url, save_path='.', pwd=''):
-        """
-        下载文件到指定路径
-        :param share_url: 蓝奏云分享链接
-        :param pwd: 访问密码(默认空)
-        :param save_path: 本地文件保存路径(默认当前目录)
-        :return: None
-        """
-        info = self.parse(share_url, pwd)
+    def upload2(self, file_path, folder_id=-1, call_back=None):
+        """分卷压缩上传"""
+        # 不超过 100MB 的文件直接上传
+        if os.path.getsize(file_path) <= 104857600:
+            return LanZouCloud.SUCCESS if self.upload(file_path, folder_id) else LanZouCloud.FAILED
+
+        # 超过 100MB 的文件，分卷压缩，单卷文件最大不能超过 80 MB
+        rar_level = 0  # 压缩等级(0-5)，0 不压缩
+        part_sum = os.path.getsize(file_path) // (self._volume_size * 1048576) + 1
+        file_name = '.'.join(file_path.split(os.sep)[-1].split('.')[:-1])  # 无后缀的文件名
+        file_list = ["{}.part{}.rar".format(file_name, i) for i in range(1, part_sum + 1)]
+        if not os.path.exists('./tmp'): os.mkdir('./tmp')  # 保存分卷文件的临时文件夹
+        cmd_args = " -m{} -v{}m a -ep ./tmp/{} {}".format(rar_level, self._volume_size, file_name, file_path)
+        if os.name == 'nt':
+            command = 'start /b ./api/rar.exe' + cmd_args  # windows 平台调用 rar.exe 实现压缩
+        else:
+            command = 'rar' + cmd_args  # linux 平台使用 rar 命令压缩
+        try:
+            os.popen(command).readlines()
+        except os.error:
+            return LanZouCloud.ZIP_ERROR
+        # 上传并删除分卷文件
+        folder_name = '.'.join(file_list[0].split('.')[:-2])  # 网盘保存的文件夹名，文件名去除.partxx.rar
+        tmp_folder_id = self.mkdir(folder_id, folder_name, '分卷压缩文件')
+        for f in file_list:
+            if not self.upload('./tmp/' + f, tmp_folder_id, call_back):
+                return LanZouCloud.FAILED
+        rmtree('./tmp')
+        return LanZouCloud.SUCCESS
+
+    def download_file(self, share_url, pwd='', save_path='.', call_back=None):
+        """通过分享链接下载文件(需提取码)"""
         if not os.path.exists(save_path):
             os.mkdir(save_path)
+        info = self.get_direct_url(share_url, pwd)
+        if info['code'] != LanZouCloud.SUCCESS:
+            return False
         try:
-            if info["file_name"].endswith(self._seed_file_suffix):  # 如果是种子文件
-                all_file_info = json.loads(requests.get(info["direct_url"]).text, encoding='utf-8')
-                save_path = save_path + os.sep + info["file_name"].replace(self._seed_file_suffix, '')
-                for file_info in all_file_info:
-                    direct_url = self.parse(file_info['share_url'])["direct_url"]
-                    part_file = requests.get(direct_url).content
-                    f = open(save_path, 'ab')
-                    f.write(part_file)
-                    f.close()
-            else:  # 如果是普通文件
-                save_name = info["file_name"].replace(self._guise_suffix, '')  # 去除伪装后缀名
-                f = open(save_path + os.sep + save_name, 'wb')
-                data = requests.get(info["direct_url"]).content
-                f.write(data)
-                f.close()
-        except Exception:
-            raise DownloadError("下载时发生错误")
+            r = requests.get(info['direct_url'], stream=True)
+            total_size = int(r.headers['content-length'])
+            now_size = 0
+            with open(save_path + os.sep + info['name'], "wb") as f:
+                for chunk in r.iter_content(chunk_size=4096):
+                    if chunk:
+                        f.write(chunk)
+                        now_size += len(chunk)
+                        if call_back is not None:
+                            call_back(info['name'], total_size, now_size)
+            return True
+        except (requests.RequestException, KeyboardInterrupt, os.error):
+            return False
+
+    def download_file2(self, fid, save_path='.', call_back=None):
+        """登录用户通过id下载文件(无需提取码)"""
+        info = self.get_share_info(fid)
+        return self.download_file(info['share_url'], info['passwd'], save_path, call_back)
