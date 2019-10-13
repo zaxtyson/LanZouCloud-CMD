@@ -17,8 +17,7 @@ class LanZouCloud(object):
     MKDIR_ERROR = 5
     DIR_EXIST = 6
     URL_INVALID = 7
-    NETWORK_ERROR = 8
-    FILE_CANCELLED = 9
+    FILE_CANCELLED = 8
 
     def __init__(self):
         self._session = requests.session()
@@ -56,7 +55,7 @@ class LanZouCloud(object):
             login_data['formhash'] = re.findall(r'name="formhash" value="(.+?)"', index)[0]
             html = self._post(self._account_url, login_data).text
             return True if '登录成功' in html else False
-        except requests.RequestException:
+        except (requests.RequestException, IndexError):
             return False
 
     def delete(self, fid):
@@ -119,6 +118,9 @@ class LanZouCloud(object):
             result = self._post(self._doupload_url, post_data).json()
             if result["info"] != 1: break  # 已经拿到全部文件的信息
             for i in result["text"]:
+                # 隐藏文件列表的伪装后缀名
+                if i['name_all'].endswith(self._guise_suffix):
+                    i['name_all'] = i['name_all'].replace(self._guise_suffix, '')
                 file_list.append({
                     'id': int(i['id']),
                     'name': i['name_all'],
@@ -133,7 +135,8 @@ class LanZouCloud(object):
 
     def get_file_list2(self, folder_id=-1):
         """获取文件名-id列表"""
-        return {i['name']: i['id'] for i in self.get_file_list(folder_id)}
+        info = {i['name']: i['id'] for i in self.get_file_list(folder_id)}
+        return {key: info.get(key) for key in sorted(info.keys())}
 
     def get_dir_list(self, folder_id=-1):
         """获取子文件夹列表"""
@@ -154,7 +157,7 @@ class LanZouCloud(object):
             path = re.findall(r'&raquo;&nbsp;.+folder_id=([0-9]+)">.+&nbsp;(.+?)</a>', html)
             for i in path:
                 path_list[i[1]] = int(i[0])
-        # 获取当前文件夹名称
+            # 获取当前文件夹名称
             if folder_id != -1:
                 current_folder = re.findall(r'&raquo;&nbsp;.+&nbsp;(.+) <font', html)[0]
                 path_list[current_folder] = folder_id
@@ -251,7 +254,7 @@ class LanZouCloud(object):
             return dir_list[folder_name]
         try:
             result = self._post(self._doupload_url, post_data).json()
-            sleep(1.5)  # 暂停,等待蓝奏云网页端刷新数据
+            sleep(1.5)  # 暂停,等待蓝奏云网页端刷新,否则拿不到数据
             return self.get_dir_list(parent_id)[folder_name] if result["info"] == '创建成功' else LanZouCloud.MKDIR_ERROR
         except requests.RequestException:
             return LanZouCloud.MKDIR_ERROR
@@ -276,7 +279,7 @@ class LanZouCloud(object):
         except requests.RequestException:
             return False
 
-    def upload(self, file_path, folder_id=-1, call_back=None):
+    def _upload_a_file(self, file_path, folder_id=-1, call_back=None):
         """上传文件到蓝奏云上指定的文件夹(默认根目录)"""
         file_name = os.path.basename(file_path)  # 从文件路径截取文件名
         tmp_list = self.get_file_list2(folder_id)
@@ -304,9 +307,13 @@ class LanZouCloud(object):
         post_data = MultipartEncoder(post_data)
         tmp_header = self._headers.copy()
         tmp_header['Content-Type'] = post_data.content_type
+        # 让回调函数里不显示伪装后缀名
+        if file_name.endswith(self._guise_suffix):
+            file_name = file_name.replace(self._guise_suffix, '')
 
         def _call_back(read_monitor):
-            call_back(file_name, read_monitor.len, read_monitor.bytes_read)
+            if call_back is not None:
+                call_back(file_name, read_monitor.len, read_monitor.bytes_read)
 
         monitor = MultipartEncoderMonitor(post_data, _call_back)
         try:
@@ -318,11 +325,11 @@ class LanZouCloud(object):
         except (requests.RequestException, KeyboardInterrupt):
             return False
 
-    def upload2(self, file_path, folder_id=-1, call_back=None):
+    def upload_file(self, file_path, folder_id=-1, call_back=None):
         """分卷压缩上传"""
         # 不超过 100MB 的文件直接上传
         if os.path.getsize(file_path) <= 104857600:
-            return LanZouCloud.SUCCESS if self.upload(file_path, folder_id) else LanZouCloud.FAILED
+            return LanZouCloud.SUCCESS if self._upload_a_file(file_path, folder_id, call_back) else LanZouCloud.FAILED
 
         # 超过 100MB 的文件，分卷压缩，单卷文件最大不能超过 80 MB
         rar_level = 0  # 压缩等级(0-5)，0 不压缩
@@ -343,18 +350,37 @@ class LanZouCloud(object):
         folder_name = '.'.join(file_list[0].split('.')[:-2])  # 网盘保存的文件夹名，文件名去除.partxx.rar
         tmp_folder_id = self.mkdir(folder_id, folder_name, '分卷压缩文件')
         for f in file_list:
-            if not self.upload('./tmp/' + f, tmp_folder_id, call_back):
+            if not self._upload_a_file('./tmp/' + f, tmp_folder_id, call_back):
                 return LanZouCloud.FAILED
         rmtree('./tmp')
+        return LanZouCloud.SUCCESS
+
+    def upload_dir(self, dir_path, folder_id=-1, call_back=None):
+        """批量上传"""
+        if not os.path.isdir(dir_path):
+            return LanZouCloud.SUCCESS
+        dir_name = dir_path.split(os.sep)[-1]
+        dir_id = self.mkdir(folder_id, dir_name, '批量上传')
+        if dir_id == LanZouCloud.MKDIR_ERROR:
+            return LanZouCloud.MKDIR_ERROR
+        for f in os.listdir(dir_path):
+            code = self.upload_file(dir_path + os.sep + f, dir_id, call_back)
+            if code == LanZouCloud.SUCCESS:
+                print('[OK]')
+            else:
+                print('[FAILED]')
         return LanZouCloud.SUCCESS
 
     def download_file(self, share_url, pwd='', save_path='.', call_back=None):
         """通过分享链接下载文件(需提取码)"""
         if not os.path.exists(save_path):
-            os.mkdir(save_path)
+            os.makedirs(save_path)
         info = self.get_direct_url(share_url, pwd)
         if info['code'] != LanZouCloud.SUCCESS:
             return False
+        # 删除伪装后缀名
+        if info['name'].endswith(self._guise_suffix):
+            info['name'] = info['name'].replace(self._guise_suffix, '')
         try:
             r = requests.get(info['direct_url'], stream=True)
             total_size = int(r.headers['content-length'])
@@ -374,3 +400,65 @@ class LanZouCloud(object):
         """登录用户通过id下载文件(无需提取码)"""
         info = self.get_share_info(fid)
         return self.download_file(info['share_url'], info['passwd'], save_path, call_back)
+
+    def _unrar(self, file_list, save_path):
+        # 如果文件都是 .part*.rar 结尾，则下载后需要解压
+        for f_name in file_list:
+            if not re.match(r'.*\.part[0-9]+\.rar', f_name):
+                return LanZouCloud.SUCCESS
+        first_rar = save_path + os.sep + file_list[0]
+        parent_dir = os.sep.join(save_path.split(os.sep)[:-1]) + os.sep
+        if os.name == 'nt':
+            command = 'start /b ./api/rar.exe -y e {} {}'.format(first_rar, parent_dir)
+        else:
+            command = 'rar -y e {} {}'.format(first_rar, parent_dir)
+        try:
+            os.popen(command).readlines()
+            rmtree(save_path)
+            return LanZouCloud.SUCCESS
+        except os.error:
+            return LanZouCloud.ZIP_ERROR
+
+    def download_dir(self, share_url, dir_pwd='', save_path='.', call_back=None):
+        """通过分享链接下载文件夹"""
+        if self._is_file_url(share_url):
+            return LanZouCloud.URL_INVALID
+        html = requests.get(share_url, headers=self._headers).text
+        if '文件不存在' in html:
+            return LanZouCloud.FILE_CANCELLED
+        if '请输入密码' in html:
+            if len(dir_pwd) == 0:
+                return LanZouCloud.LACK_PASSWORD
+            lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
+            t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
+            k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
+            fid = re.findall(r"'fid':'?(\d+)'?,", html)[0]
+            post_data = {'lx': lx, 'pg': 1, 'k': k, 't': t, 'fid': fid, 'pwd': dir_pwd}
+            try:
+                r = requests.post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
+            except requests.RequestException:
+                return LanZouCloud.FAILED
+            if r['zt'] == 3:
+                return LanZouCloud.PASSWORD_ERROR
+            elif r['zt'] != 1:
+                return LanZouCloud.FAILED
+            # 获取文件信息成功后...
+            info = {f['name_all']: self._host_url + '/' + f['id'] for f in r['text']}
+            file_list = list(info.keys())
+            url_list = [info.get(key) for key in sorted(info.keys())]
+            for url in url_list:
+                if self.download_file(url, '', save_path, call_back):
+                    print('[OK]')
+                else:
+                    print('[FAILED]')
+            return self._unrar(file_list, save_path)
+
+    def download_dir2(self, fid, save_path='.', call_back=None):
+        """登录用户通过id下载文件夹"""
+        info = self.get_file_list2(fid)
+        for f_id in info.values():
+            if self.download_file2(f_id, save_path, call_back):
+                print('[OK]')
+            else:
+                print('[FAILED]')
+        return self._unrar(list(info.keys()), save_path)

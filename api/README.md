@@ -7,18 +7,22 @@
 
 # 更新说明
 - 修复了登录时 `formhash` 错误的问题
-- 修复了因蓝奏云官网变化导致的功能异常
+- 修复了因蓝奏云官网变化导致的功能异常   [#3](https://github.com/zaxtyson/LanZouCloud/issues/3)
 - 细化 API 接口的功能，某些接口被取消、更名
-- 上传文件、创建文件夹时会进行存在性检查
+- 操作网盘时会进行检查，屏蔽蓝奏云不合理的设计
+- 支持批量上传/下载
+- 上传大文件不再直接将数据分段，改用 RAR 分卷压缩    [#2](https://github.com/zaxtyson/LanZouCloud/issues/2)
+- 取消使用`种子文件`下载大文件，自动识别分卷压缩文件并解压
+- 上传/下载时支持使用回调函数显示进度  [#1](https://github.com/zaxtyson/LanZouCloud/issues/1)
 - 不再向上抛异常，而是返回错误码
-- 用脚写代码，用心写文档
+- 用心写文档 ❤
 
 # 简介
 
 - 本库封装了对蓝奏云的基本操作: 登录、列出文件、下载文件、上传文件、删除文件(夹)、
 清空回收站、恢复文件、创建文件夹、设置文件(夹)访问密码
 - 此外，通过伪装后缀名，解决了蓝奏云的上传格式限制。
-通过分卷上传，解决了单文件最大 100MB 的限制
+通过分卷上传，解决了单文件最大 100MB 的限制。同时增加了批量上传/下载的功能
 
 - 如果有任何问题或建议，欢迎提 issue。最后，求一个 star (≧∇≦)ﾉ
 
@@ -88,6 +92,7 @@ print(sub_dirs)
 file_list = lzy.get_file_list(1037070)
 print(file_list)
 ```
+注意 : 添加了伪装后缀名的文件，伪装后缀会被自动去除 
 
 返回值 : 
 ```python
@@ -139,7 +144,7 @@ print(file_list)
 ---
 
 ### `.get_full_path(folder_id)`  
-> 获取文件夹绝对路径
+> 获取文件夹的绝对路径
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
@@ -205,56 +210,8 @@ print(status)
 
 ---
 
-### `.upload(file_path, folder_id, call_back)`  
+### `.upload_file(file_path, folder_id, call_back)`  
 > 上传文件到网盘的指定文件夹  
-
-|参数|类型|说明|必填|备注|  
-|:---:|:---:|:---:|:---:|:---:|
-|file_path|str|本地文件路径|Y|使用绝对路径|
-|folder_id|int|网盘文件夹id|N|默认`-1`(根目录)|
-|call_back|func|回调函数|N|默认`None`|
-
-返回值 : 上传成功返回 `True`,失败返回 `False`
-
-注意 : 上传一个网盘中已经存在的文件，默认执行覆盖操作
-
-回调函数 : 该函数用于跟踪上传进度  
-|参数|类型|说明|
-|:---:|:---:|:---:|:---:|
-|file_name|str|上传文件名|
-|total_size|int|文件总字节数|
-|now_size|int|已上传字节数|
-  
-
-示例:
-```python
-# 编写显示上传进度条的回调函数
-def show_progress(file_name, total_size, now_size):
-    percent = now_size / total_size
-    bar_len = 40            # 进度条长总度
-    now_size /= 1048576     # Bytes to MB
-    total_size /= 1048576
-    bar_str = '>' * int(bar_len * percent) + '=' * int(bar_len * (1 - percent))
-    sys.stdout.write('{} [{}] {:.2f}% ({:.1f}/{:.1f}MB) \r'.format(
-        file_name, bar_str, percent * 100, now_size, total_size))
-
-# 上传 D:\test\123.zip 到网盘中 id 为 233333 的文件夹
-if lzy.upload(r"D:\test\123.zip", 233333, show_progress):
-    print('上传成功')
-else:
-    print('上传失败')
-```
-
-结果 : 
-```
-123.zip [>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>====] 87.72% (39.9/45.5MB)
-
-```
-
----
-
-### `.upload2(file_path, folder_id, call_back)`  
-> 强化版 upload，解除单文件 100MB 大小限制
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
@@ -265,18 +222,74 @@ else:
 返回值 : 
 - 上传成功返回 `LanZouCloud.SUCCESS` 
 - 上传失败返回 `LanZouCloud.FAILED`
-- 压缩过程异常返回 `LanZouCloud.ZIP_ERROR`  
+- 压缩过程异常返回 `LanZouCloud.ZIP_ERROR` 
 
 注意 : 
-- 连续多文件上传的极限是 80 MB/个,所以分卷大小为 80 MB
+- 上传一个网盘中已经存在的文件，默认执行覆盖操作
+- 不支持的文件会自动添加伪装后缀名，下载时自动去除
+- 连续上传多个文件时限制大小 80 MB/个,所以分卷大小为 80 MB
 - 上传大文件会自动在网盘创建文件夹以保存分卷
-- 重复上传默认执行覆盖操作
 
-回调函数 : 同 `.upload()`
+回调函数 : 该函数用于跟踪上传进度  
+
+|参数|类型|说明|
+|:---:|:---:|:---:|
+|file_name|str|上传文件名|
+|total_size|int|文件总字节数|
+|now_size|int|已上传字节数|
+  
+
+示例:
+```python
+# 显示上传进度条的回调函数
+def show_progress(file_name, total_size, now_size):
+    percent = now_size / total_size
+    bar_len = 40            # 进度条长总度
+    now_size /= 1048576     # Bytes to MB
+    total_size /= 1048576
+    bar_str = '>' * round(bar_len * percent) + '=' * round(bar_len * (1 - percent))
+    print('\r{:.2f}% [{}] {:.1f}/{:.1f}MB\t|\t{} '.format(
+        percent * 100, bar_str, now_size, total_size, file_name), end='')
+
+code = lzy.upload_file(r"D:\test\DJ Okawari - Luv Letter.mp3", -1, show_progress)
+if code != LanZouCloud.SUCCESS:
+    print('上传失败!')
+```
+
+结果 : 
+
+![](./img/upload_file.gif)
 
 ---
 
-### `.download_file(share_url, pwd, save_path, call_back):`  
+### `.upload_dir(dir_path, folder_id, call_back)`  
+> 上传一个文件夹
+
+|参数|类型|说明|必填|备注|  
+|:---:|:---:|:---:|:---:|:---:|
+|dir_path|str|本地文件夹路径|Y|使用绝对路径|
+|folder_id|int|网盘文件夹id|N|默认`-1`(根目录)|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 同 `.upload_file()`
+
+注意 : 上传的文件夹中，不能存在子文件夹
+
+回调函数 : 同 `.upload_file()`
+
+示例 :
+```python
+code = lzy.upload_dir(r"D:\test\music", -1, show_progress)
+if code != LanZouCloud.SUCCESS:
+    print('上传失败!')
+```
+
+结果 :  
+![](./img/upload_dir.gif)
+
+---
+
+### `.download_file(share_url, pwd, save_path, call_back)`  
 > 通过分享链接下载文件
   
 |参数|类型|说明|必填|备注|  
@@ -290,26 +303,17 @@ else:
 
 示例 : 
 ```python
-# 编写显示上传进度条的回调函数
-def show_progress(file_name, total_size, now_size):
-    percent = now_size / total_size
-    bar_len = 40            # 进度条长总度
-    now_size /= 1048576     # Bytes to MB
-    total_size /= 1048576
-    bar_str = '>' * int(bar_len * percent) + '=' * int(bar_len * (1 - percent))
-    sys.stdout.write('{} [{}] {:.2f}% ({:.1f}/{:.1f}MB) \r'.format(
-        file_name, bar_str, percent * 100, now_size, total_size))
+code = lzy.download_file('https://www.lanzous.com/i6qxywb', '6666', r'D:\test\download', show_progress)
+if not code:
+    print('下载失败!')
+```
+ 
+结果 :  
+![](./img/download_file.gif)
 
-# 下载文件到默认路径
-lzy.download_file('https://www.lanzous.com/i6q0fli', '6666', call_back=show_progress)
-```
-
-结果 :
-```
-Git-2.23.0-64-bit.exe [>>>>>>>>>>>>>>>>>>>>>>>>>>>>===========] 71.63% (32.6/45.5MB)
-```
 ---
-### `.download_file2(fid, save_path, call_back):`  
+
+### `.download_file2(fid, save_path, call_back)`  
 > 登录用户通过id下载文件
   
 |参数|类型|说明|必填|备注|  
@@ -323,6 +327,63 @@ Git-2.23.0-64-bit.exe [>>>>>>>>>>>>>>>>>>>>>>>>>>>>===========] 71.63% (32.6/45.
 回调函数 : 同 `.download_file()`
 
 ---
+
+### `.download_dir(share_url, dir_pwd, save_path, call_back)`  
+> 通过分享链接下载文件夹
+  
+|参数|类型|说明|必填|备注|  
+|:---:|:---:|:---:|:---:|:---:|
+|share_url|str|文件夹分享链接|Y|-|
+|dir_pwd|str|提取码|N|默认空|
+|save_path|str|文件保存路径|N|默认当前路径|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 
+- 链接非法返回 `LanZouCloud.URL_INVALID`
+- 文件已取消返回 `LanZouCloud.FILE_CANCELLED`
+- 下载成功返回 `LanZouCloud.SUCCESS`
+- 下载失败返回 `LanZouCloud.FAILED`
+- 缺少提取码返回 `LanZouCloud.LACK_PASSWORD`
+- 提取码错误返回 `LanZouCloud.PASSWORD_ERROR`
+- 解压失败返回 `LanZouCloud.ZIP_ERROR`
+
+注意 :
+- 不能下载多级文件夹，只会下载一个文件夹下的所有文件
+- 分卷压缩文件下载完成后自动解压出原文件
+
+示例 : 
+```python
+code = lzy.download_dir('https://www.lanzous.com/b0f142z0d/', '6666', r'D:\test\download', show_progress)
+if code == LanZouCloud.LACK_PASSWORD:
+    print('大人！您没给我没填提取码啊！')
+elif code == LanZouCloud.PASSWORD_ERROR:
+    print('我好难啊，提取码不对！')
+```
+
+结果 :  
+![](./img/download_dir.gif)
+
+---
+### `.download_dir2(fid, save_path, call_back)`  
+> 登录后通过id下载文件夹
+  
+|参数|类型|说明|必填|备注|  
+|:---:|:---:|:---:|:---:|:---:|
+|fid|int|文件夹id|Y|-|
+|save_path|str|文件保存路径|N|默认当前路径|
+|call_back|func|回调函数|N|默认`None`|
+
+返回值 : 同 `.download_dir()`
+
+示例 : 
+```python
+code = lzy.download_dir2(1056513, r'D:\test\download', show_progress)
+if code != LanZouCloud.SUCCESS:
+    print('艾玛，失败了??不可能!!')
+```
+
+---
+
 ### `.mkdir(parent_id, folder_name, description)`  
 > 在网盘创建文件夹  
 
@@ -430,6 +491,14 @@ print(status)
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件(夹)id|Y|-|
 
+示例 :
+```python
+info = lzy.get_share_info(1033203)
+
+if info['code'] == LanZouCloud.SUCCESS:
+    print('分享链接:' + info['share_url'])
+```
+
 返回值 : 
 ```python
 {
@@ -443,14 +512,6 @@ print(status)
 - 获取成功 : `LanZouCloud.SUCCESS`
 - 获取失败 : `LanZouCloud.FAILED`
 - fid参数错误 : `LanZouCloud.ID_ERROR`
-
-示例 :
-```python
-info = lzy.get_share_info(1033203)
-
-if info['code'] == LanZouCloud.SUCCESS:
-    print('分享链接:' + info['share_url'])
-```
 
 ---
 
@@ -480,6 +541,16 @@ print(status)
 |share_url|str|文件分享链接|Y|-|
 |pwd|str|提取码|N|默认空|
 
+示例 :
+```python
+info = lzy.get_direct_url('https://www.lanzous.com/i6qxywb', '6666')
+
+if info['code'] == LanZouCloud.SUCCESS:
+    print('直链地址:' + info['direct_url'])
+elif info['code'] == LanZouCloud.LACK_PASSWD:
+    print('缺少提取码')
+```
+
 返回值 : 
 ```python
 {
@@ -495,29 +566,17 @@ print(status)
 - 提取码错误 : `LanZouCloud.PASSWORD_ERROR`
 - 文件已取消 : `LanZouCloud.FILE_CANCELLED`
 
-示例 :
-```python
-info = lzy.get_direct_url('https://www.lanzous.com/i6k203g', '6666')
-
-if info['code'] == LanZouCloud.SUCCESS:
-    print('直链地址:' + info['direct_url'])
-elif info['code'] == LanZouCloud.LACK_PASSWD:
-    print('缺少提取码')
-```
-
 注意 : 
 - 本方法会检查分享链接合法性
 - 直链有效期约 30 分钟
 
 ---
 ### `.get_direct_url2(fid)`  
-> 通过id获取文件下载直链
+> 登录后通过id获取文件下载直链
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件id|Y|-|
 
 返回值 :  同 `.get_direct_url()`
-
-注意 : 登录后才能通过 id 获取直链，此时无需提取码
 
