@@ -407,19 +407,19 @@ class LanZouCloud(object):
             if not re.match(r'.*\.part[0-9]+\.rar', f_name):
                 return LanZouCloud.SUCCESS
         first_rar = save_path + os.sep + file_list[0]
-        parent_dir = os.sep.join(save_path.split(os.sep)[:-1]) + os.sep
         if os.name == 'nt':
-            command = 'start /b ./api/rar.exe -y e {} {}'.format(first_rar, parent_dir)
+            command = 'start /b ./api/rar.exe -y e {} {}'.format(first_rar, save_path)
         else:
-            command = 'rar -y e {} {}'.format(first_rar, parent_dir)
+            command = 'rar -y e {} {}'.format(first_rar, save_path)
         try:
             os.popen(command).readlines()
-            rmtree(save_path)
+            for f_name in file_list:
+                os.remove(save_path + os.sep + f_name)
             return LanZouCloud.SUCCESS
         except os.error:
             return LanZouCloud.ZIP_ERROR
 
-    def download_dir(self, share_url, dir_pwd='', save_path='.', call_back=None):
+    def download_dir(self, share_url, dir_pwd='', save_path='./down', call_back=None):
         """通过分享链接下载文件夹"""
         if self._is_file_url(share_url):
             return LanZouCloud.URL_INVALID
@@ -453,7 +453,7 @@ class LanZouCloud(object):
                     print('[FAILED]')
             return self._unrar(file_list, save_path)
 
-    def download_dir2(self, fid, save_path='.', call_back=None):
+    def download_dir2(self, fid, save_path='./down', call_back=None):
         """登录用户通过id下载文件夹"""
         info = self.get_file_list2(fid)
         for f_id in info.values():

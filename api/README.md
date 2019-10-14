@@ -335,7 +335,7 @@ if not code:
 |:---:|:---:|:---:|:---:|:---:|
 |share_url|str|文件夹分享链接|Y|-|
 |dir_pwd|str|提取码|N|默认空|
-|save_path|str|文件保存路径|N|默认当前路径|
+|save_path|str|文件保存路径|N|默认`./down`|
 |call_back|func|回调函数|N|默认`None`|
 
 返回值 : 
@@ -370,7 +370,7 @@ elif code == LanZouCloud.PASSWORD_ERROR:
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件夹id|Y|-|
-|save_path|str|文件保存路径|N|默认当前路径|
+|save_path|str|文件保存路径|N|默认`./down`|
 |call_back|func|回调函数|N|默认`None`|
 
 返回值 : 同 `.download_dir()`
