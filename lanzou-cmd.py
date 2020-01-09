@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from getpass import getpass
 from time import sleep
 import readline
-from lanzou import LanZouCloud
+from lanzou.api import LanZouCloud      # pip install lanzou-api
 
 
 class Commander(object):
@@ -55,7 +55,7 @@ class Commander(object):
     def set_console_style(self):
         """设置命令行窗口样式"""
         if os.name != 'nt': return None
-        os.system('mode con cols=85 lines=30')
+        os.system('mode con cols=110 lines=30')
         os.system('title LanZouCloud-CMD 2.0 by zaxtyson')
 
     def login(self):
@@ -127,13 +127,13 @@ class Commander(object):
             return None
         # 删除文件
         if file_id is not None and dir_id is None:
-            if self._disk.delete(file_id) == LanZouCloud.SUCCESS:
+            if self._disk.delete(file_id, is_file=True) == LanZouCloud.SUCCESS:
                 self._file_list.pop(name)
             else:
                 print('ERROR : 删除文件失败:{}'.format(name))
         # 删除文件夹
         if dir_id is not None and file_id is None:
-            if self._disk.delete(dir_id) == LanZouCloud.SUCCESS:
+            if self._disk.delete(dir_id, is_file=False) == LanZouCloud.SUCCESS:
                 self._folder_list.pop(name)
             else:
                 print('ERROR : 删除失败,存在子文件夹?:{}'.format(name))
@@ -168,13 +168,13 @@ class Commander(object):
             return None
         # 恢复文件
         if file_id is not None and dir_id is None:
-            if self._disk.recovery(file_id) == LanZouCloud.SUCCESS:
+            if self._disk.recovery(file_id, is_file=True) == LanZouCloud.SUCCESS:
                 self._file_list.pop(name)
             else:
                 print('ERROR : 恢复文件失败:{}'.format(name))
         # 恢复文件夹
         if dir_id is not None and file_id is None:
-            if self._disk.recovery(dir_id) == LanZouCloud.SUCCESS:
+            if self._disk.recovery(dir_id, is_file=False) == LanZouCloud.SUCCESS:
                 self._folder_list.pop(name)
             else:
                 print('ERROR : 恢复文件夹失败:{}'.format(name))
@@ -288,7 +288,7 @@ class Commander(object):
             return None
         if self._file_list.get(name, None):
             info_all = self._disk.get_file_list(self._work_id).get(name)
-            share_info = self._disk.get_share_info(info_all['id'])
+            share_info = self._disk.get_share_info(info_all['id'], is_file=True)
             d_url = self._disk.get_direct_url2(info_all['id'])
             print('-' * 50)
             print('文件名 : {}'.format(name))
@@ -300,7 +300,7 @@ class Commander(object):
             print('下载直链 : {}'.format(d_url['direct_url'] or '无'))
             print('-' * 50)
         elif self._folder_list.get(name, None):
-            share_info = self._disk.get_share_info(self._folder_list.get(name))
+            share_info = self._disk.get_share_info(self._folder_list.get(name), is_file=False)
             print('-' * 50)
             print('文件夹名 : {}'.format(name))
             print('提取码 : {}'.format(share_info['passwd'] or '无'))
@@ -311,15 +311,19 @@ class Commander(object):
 
     def passwd(self, name):
         """设置文件(夹)提取码"""
-        fid = self._file_list.get(name, None) or self._folder_list.get(name, None)
-        if fid is None:
+        file_flag = True       # 默认 fid 为文件 id
+        fid = self._file_list.get(name, None)
+        if not fid:
+            fid = self._folder_list.get(name, None)
+            file_flag = False      # fid 为文件夹 id
+        if not fid:
             print('ERROR : 文件(夹)不存在:{}'.format(name))
             return None
-        info = self._disk.get_share_info(fid)
+        info = self._disk.get_share_info(fid, is_file=file_flag)
         new_pass = input('修改提取码 "{}" -> '.format(info['passwd'] or '无'))
         if 2 <= len(new_pass) <= 6:
             if new_pass == 'off': new_pass = ''
-            self._disk.set_share_passwd(fid, new_pass)
+            self._disk.set_share_passwd(fid, new_pass, is_file=file_flag)
         else:
             print('ERROR : 提取码为2-6位字符,关闭请输入off')
 
@@ -347,7 +351,7 @@ class Commander(object):
 
     def help(self):
         help_text = """
-    LanZouCloud-Cmd v2.0   by zaxtyson
+    LanZouCloud-Cmd v2.2.1   by zaxtyson
         
     • CMD版蓝奏云控制台，支持路径自动补全
     • 支持大文件上传，解除格式限制
@@ -377,6 +381,7 @@ class Commander(object):
     https://github.com/zaxtyson/LanZouCloud-CMD   
     如有Bug反馈或建议请在 GitHub 提 Issue 或者
     发送邮件至 : zaxtyson@foxmail.com
+    感谢您的使用 :)
         """
         print(help_text)
 

@@ -10,6 +10,12 @@
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 </p>
 
+# `v2.2.1` 更新说明
+- 修复了文件(夹)无法下载的问题 [#4](https://github.com/zaxtyson/LanZouCloud-CMD/issues/4)
+- 修复了上传 rar 分卷文件被 ban 的问题
+- 修复了无后缀文件上传出错的问题
+- 修复了文件中空白字符导致上传和解压失败的问题
+
 # `v2.1` 更新说明
 - 修复了蓝奏云分享链接格式变化导致无法获取直链的问题
 
