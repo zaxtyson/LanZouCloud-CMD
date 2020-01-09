@@ -29,7 +29,10 @@
 - 增加了通过分享链接下载的功能
 
 # 下载使用
+- 感谢 [rachpt](https://github.com/rachpt/lanzou-gui) 开发的 GUI 版本，[点我](https://github.com/rachpt/lanzou-gui/wiki)查看详情
+
 - 蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
+
 - 在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
 
 # 其它说明
