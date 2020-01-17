@@ -10,6 +10,29 @@
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 </p>
 
+# 说明
+- 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
+- 在 Linux 平台使用时，您需要安装 `rar` 工具，然后在 `config.ini`中设置它的路径
+- 默认下载路径为 `D:\LanZouCloud`，请使用 `setpath` 命令修改
+- 可以使用 `down 分享链接` 的方式下载文件(夹)~
+- 关注本页面以获取更新，如果有问题或者建议，请提 issue
+- 如果喜欢本项目，请给一个 star (^▽^)/
+- 详细介绍请移步 [Wiki](https://github.com/zaxtyson/LanZouCloud-CMD/wiki) 页面
+
+# 下载
+- 感谢 [rachpt](https://github.com/rachpt/lanzou-gui) 开发的 GUI 版本，[点我](https://github.com/rachpt/lanzou-gui/wiki)查看详情
+
+- 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
+
+- 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# `v2.3.1` 更新说明
+- 界面焕然一新
+- 修复了一堆 BUG
+- 新增设置描述信息功能
+- 完善了回收站功能
+- 完善了移动文件功能
+
 # `v2.2.1` 更新说明
 - 修复了文件(夹)无法下载的问题 [#4](https://github.com/zaxtyson/LanZouCloud-CMD/issues/4)
 - 修复了上传 rar 分卷文件被 ban 的问题
@@ -27,62 +50,3 @@
 - 增加了回收站功能
 - 取消了`种子文件`下载方式，自动识别分卷数据并解压
 - 增加了通过分享链接下载的功能
-
-# 下载使用
-- 感谢 [rachpt](https://github.com/rachpt/lanzou-gui) 开发的 GUI 版本，[点我](https://github.com/rachpt/lanzou-gui/wiki)查看详情
-
-- 蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
-
-- 在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
-
-# 其它说明
-- 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
-- 在 Linux 平台使用时，您需要安装 `rar` 工具，然后在 `config.ini`中设置它的路径
-- 默认下载路径为 `D:\LanZouCloud`，请使用 `setpath` 命令修改
-- 可以使用 `down 分享链接` 的方式下载文件(夹)了~
-- 关注本页面以获取更新，如果有问题或者建议，请提 issue
-- 如果喜欢本项目，请给一个 star (^▽^)/
-
-# 命令帮助
-    help    显示帮助信息
-    login   登录网盘/切换账号
-    logout  注销当前账号
-    ls      列出文件(夹)
-    cd      切换工作目录
-    cdrec   进入回收站
-    rm      删除网盘文件(夹)
-    mkdir   创建新文件夹
-    share   显示分享信息
-    clear   清空屏幕
-    clean   清空回收站
-    upload  上传文件(夹)
-    down    下载文件(夹)
-    passwd  设置文件(夹)提取码
-    setpath 设置默认下载路径
-    rename  重命名文件夹
-    mv      移动文件到某个文件夹
-    bye     退出本程序
-    
-# 演示
-
-> 批量上传文件/上传大文件
-
-![](./img/upload.gif)
-
-> 批量下载文件/分卷文件自动解压
-
-![](./img/down.gif)
-
-> 获取分享链接/提取码/直链
-
-![](./img/share.gif)
-
-> 通过分享链接下载文件(夹)
-
-![](./img/down_by_url.gif)
-
-> 回收站恢复文件
-
-![](./img/recovery.gif)
-
-> 其它功能自行探索~
