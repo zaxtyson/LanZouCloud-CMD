@@ -10,6 +10,10 @@
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 </p>
 
+# 界面
+
+![](https://www.6000tu.com/images/2020/01/17/image.png)
+
 # 说明
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 在 Linux 平台使用时，您需要安装 `rar` 工具，然后在 `config.ini`中设置它的路径
@@ -17,14 +21,17 @@
 - 可以使用 `down 分享链接` 的方式下载文件(夹)~
 - 关注本页面以获取更新，如果有问题或者建议，请提 issue
 - 如果喜欢本项目，请给一个 star (^▽^)/
-- 详细介绍请移步 [Wiki](https://github.com/zaxtyson/LanZouCloud-CMD/wiki) 页面
+- 使用说明请移步 [Wiki](https://github.com/zaxtyson/LanZouCloud-CMD/wiki) 页面
 
 # 下载
-- 感谢 [rachpt](https://github.com/rachpt/lanzou-gui) 开发的 GUI 版本，[点我](https://github.com/rachpt/lanzou-gui/wiki)查看详情
 
 - 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# GUI 版
+
+感谢 [rachpt](https://github.com/rachpt/lanzou-gui) 开发的 GUI 版本，[点我](https://github.com/rachpt/lanzou-gui/wiki)查看详情
 
 # `v2.3.1` 更新说明
 - 界面焕然一新
