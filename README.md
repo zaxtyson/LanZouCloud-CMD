@@ -10,6 +10,10 @@
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 </p>
 
+# 界面
+
+![](https://www.6000tu.com/images/2020/01/17/image.png)
+
 # 说明
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 在 Linux 平台使用时，您需要先安装 `rar` 工具
