@@ -12,7 +12,8 @@
 
 # 界面
 
-![](https://www.6000tu.com/images/2020/01/17/image.png)
+![UI](http://img04.sogoucdn.com/app/a/100520146/3A75655C23AD4813BBDAE850477C7084)
+
 
 # 说明
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
