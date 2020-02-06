@@ -1,11 +1,10 @@
-#!python3
 # coding=utf-8
 import os
-from configparser import ConfigParser
 from getpass import getpass
 from time import sleep
 import readline
 from lanzou.api import LanZouCloud  # pip install lanzou-api
+from pickle import load, dump
 
 
 def check_rec_mode(func):
@@ -38,8 +37,12 @@ class Commander(object):
         self._parent_name = ''
         self._work_name = ''
         self._work_id = -1
-        self._config = ConfigParser()
-        self._config.read('config.ini', encoding='utf-8')
+        self._config_file = 'config.dat'
+        self._config = None
+        self._default_down_path = './Download'
+
+        with open(self._config_file, 'rb') as config:
+            self._config = load(config)
 
     @staticmethod
     def _show_progress(file_name, total_size, now_size):
@@ -71,7 +74,7 @@ class Commander(object):
        | |___| (_| | | | | / /__| (_) | |_| | \__/\ | (_) | |_| | (_| |
        \_____/\____|_| |_|\_____/\___/ \____|\____/_|\___/ \____|\____|
       --------------------------------------------------------------------
-      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: 2.3.1)
+      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: 2.3.2)
       --------------------------------------------------------------------
             """
         print(logo_str)
@@ -114,25 +117,38 @@ class Commander(object):
 
     def _check_rar_tool(self):
         """设置RAR解压工具"""
-        rar_bin = self._config.get('path', 'rar_bin')
+        if os.name == 'nt':
+            rar_bin = './rar.exe'
+        else:
+            rar_bin = '/usr/bin/rar'
         if self._disk.set_rar_tool(rar_bin) == LanZouCloud.ZIP_ERROR:
-            print('ERROR : 缺少解压工具，请修改配置文件!!!')
+            print('ERROR : 缺少解压工具! \n'
+                  'Windows 用户请检查 rar.exe 文件是否存在\n'
+                  'Linux 用户请执行: sudo apt install rar')
             sleep(2)
             exit(-1)
+
+    def _check_down_path(self):
+        """检查下载路径"""
+        if not self._config.get('path'):
+            print('请设置文件下载路径')
+            self.setpath()
 
     def login(self):
         """登录网盘"""
         self.clear()
         self._print_logo()
-        username = self._config.get('login', 'username') or input('输入用户名:')
-        password = self._config.get('login', 'password') or getpass('输入密码:')
-        if self._disk.login(username, password) != LanZouCloud.SUCCESS:
-            print('登录失败 : 用户名或密码错误 :(')
-            return None
-        # 登录成功保存用户名和密码
-        self._config.set('login', 'username', username)
-        self._config.set('login', 'password', password)
-        self._config.write(open('config.ini', 'w', encoding='utf-8'))
+        cookie = self._config.get('cookie')
+        if not cookie or self._disk.login_by_cookie(cookie) != LanZouCloud.SUCCESS:
+            username = input('输入用户名:')
+            password = getpass('输入密码:')
+            if self._disk.login(username, password) != LanZouCloud.SUCCESS:
+                print('登录失败 : 用户名或密码错误 :(')
+                return None
+            # 登录成功保存用户 cookie
+            self._config['cookie'] = self._disk.get_cookie()
+            with open(self._config_file, 'wb') as f:
+                dump(self._config, f)
         # 刷新文件列表
         self._refresh(self._work_id)
 
@@ -319,7 +335,7 @@ class Commander(object):
                 print('')
             else:
                 files_per_line += 1
-        folder_name = input(f'移动 "{filename}" -> ') or ' '
+        folder_name = input(f'\n移动 "{filename}" -> ') or ' '
         folder_id = self._dir_id_list.get(folder_name, None)
         if not folder_id:
             print(f'ERROR : 文件夹不存在的啦: {folder_name}')
@@ -334,7 +350,7 @@ class Commander(object):
     @check_rec_mode
     def _down_by_id(self, name):
         """通过 id 下载文件(夹)"""
-        save_path = self._config.get('path', 'save_path')
+        save_path = self._config.get('path') or self._default_down_path
         if self._file_id_list.get(name, None):  # 如果是文件
             code = self._disk.down_file_by_id(self._file_id_list.get(name), save_path, self._show_progress)
             if code != LanZouCloud.SUCCESS:
@@ -373,7 +389,7 @@ class Commander(object):
     @check_rec_mode
     def _down_by_url(self, url):
         """通过 url 下载"""
-        save_path = self._config.get('path', 'save_path')
+        save_path = self._config.get('path') or self._default_down_path
         if self._disk.is_file_url(url):  # 如果是文件
             code = self._disk.down_file_by_url(url, '', save_path, self._show_progress)
             if code == LanZouCloud.LACK_PASSWORD:
@@ -519,11 +535,12 @@ class Commander(object):
 
     def setpath(self):
         """设置下载路径"""
-        print(f"当前下载路径 : {self._config.get('path', 'save_path')}")
+        print(f"当前下载路径 : {self._config.get('path')}")
         path = input('修改为 -> ').strip("\"\' ")
         if os.path.isdir(path):
-            self._config.set('path', 'save_path', path)
-            self._config.write(open('config.ini', 'w', encoding='utf-8'))
+            self._config['path'] = path
+            with open(self._config_file, 'wb') as f:
+                dump(self._config, f)
         else:
             print('ERROR : 路径非法,取消修改')
 
@@ -531,9 +548,6 @@ class Commander(object):
         """注销"""
         self.clear()
         self._disk.logout()
-        self._config.set('login', 'username', '')
-        self._config.set('login', 'password', '')
-        self._config.write(open('config.ini', 'w', encoding='utf-8'))
         self._file_list = []
         self._dir_list = []
         self._path_list = {'LanZouCloud': -1}
@@ -541,6 +555,9 @@ class Commander(object):
         self._parent_name = ''
         self._work_id = -1
         self._work_name = ''
+        self._config['cookie'] = None
+        with open(self._config_file, 'wb') as f:
+            dump(self._config, f)
 
     @staticmethod
     def print_help():

@@ -12,9 +12,9 @@
 
 # 说明
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
-- 在 Linux 平台使用时，您需要安装 `rar` 工具，然后在 `config.ini`中设置它的路径
-- 默认下载路径为 `D:\LanZouCloud`，请使用 `setpath` 命令修改
-- 可以使用 `down 分享链接` 的方式下载文件(夹)~
+- 在 Linux 平台使用时，您需要先安装 `rar` 工具
+- 默认下载路径为 `./Download`，请使用 `setpath` 命令修改
+- 未登录时可使用 `down URL` 的方式下载文件(夹)~
 - 关注本页面以获取更新，如果有问题或者建议，请提 issue
 - 如果喜欢本项目，请给一个 star (^▽^)/
 - 详细介绍请移步 [Wiki](https://github.com/zaxtyson/LanZouCloud-CMD/wiki) 页面
@@ -25,6 +25,11 @@
 - 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# `v2.3.2` 更新说明
+- 修复了无法上传的 Bug
+- 解除了官方对文件名包含多个后缀的限制
+- 使用 cookie 登录，配置文件不再保存明文
 
 # `v2.3.1` 更新说明
 - 界面焕然一新
