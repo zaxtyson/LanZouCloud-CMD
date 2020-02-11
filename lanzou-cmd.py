@@ -74,7 +74,7 @@ class Commander(object):
        | |___| (_| | | | | / /__| (_) | |_| | \__/\ | (_) | |_| | (_| |
        \_____/\____|_| |_|\_____/\___/ \____|\____/_|\___/ \____|\____|
       --------------------------------------------------------------------
-      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: 2.3.2)
+      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: 2.3.3)
       --------------------------------------------------------------------
             """
         print(logo_str)
@@ -115,7 +115,7 @@ class Commander(object):
                 if d['name'] == name:
                     self._dir_list.remove(d)
 
-    def _check_rar_tool(self):
+    def check_rar_tool(self):
         """设置RAR解压工具"""
         if os.name == 'nt':
             rar_bin = './rar.exe'
@@ -671,7 +671,7 @@ class Commander(object):
 if __name__ == '__main__':
     lanzou_cmd = Commander()
     lanzou_cmd.set_console_style()
-    lanzou_cmd._check_rar_tool()
+    lanzou_cmd.check_rar_tool()
     lanzou_cmd.login()
     while True:
         lanzou_cmd.process_a_cmd()

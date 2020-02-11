@@ -12,7 +12,7 @@
 
 # 界面
 
-![](https://www.6000tu.com/images/2020/01/17/image.png)
+![](https://s2.ax1x.com/2020/02/11/1TdSN4.png)
 
 # 说明
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
@@ -29,6 +29,9 @@
 - 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# `v2.3.3` 更新说明
+- 修复上传超过 1GB 的文件时，前 10 个分卷丢失的 Bug [#7](https://github.com/zaxtyson/LanZouCloud-CMD/issues/7)
 
 # `v2.3.2` 更新说明
 - 修复了无法上传的 Bug
