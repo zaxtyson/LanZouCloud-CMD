@@ -12,12 +12,13 @@
 
 # 界面
 
-![](https://s2.ax1x.com/2020/02/11/1TdSN4.png)
+![ui.png](https://upload.cc/i1/2020/02/18/GU7DLu.png)
 
 # 说明
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 在 Linux 平台使用时，您需要先安装 `rar` 工具
 - 默认下载路径为 `./Download`，请使用 `setpath` 命令修改
+- 默认分卷大小为 100 MB, 会员用户请使用 `setsize` 命令修改
 - 未登录时可使用 `down URL` 的方式下载文件(夹)~
 - 关注本页面以获取更新，如果有问题或者建议，请提 issue
 - 如果喜欢本项目，请给一个 star (^▽^)/
@@ -29,6 +30,18 @@
 - 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# `v2.3.4` 更新说明
+- 新增 `update` 命令检查更新(每次启动会检查一次)
+- 解除了官方对上传分卷文件的限制 [#11](https://github.com/zaxtyson/LanZouCloud-CMD/issues/11) [#12](https://github.com/zaxtyson/LanZouCloud-CMD/issues/12)
+- `rename` 命令支持会员用户修改文件名 [#9](https://github.com/zaxtyson/LanZouCloud-CMD/issues/9)
+- 新增 `setsize` 命令支持会员用户修改分卷大小 [#9](https://github.com/zaxtyson/LanZouCloud-CMD/issues/9)
+- `mv` 命令支持移动文件夹(不含子文件夹)
+- 支持 `cd /` 返回根目录, `cd -` 返回上一次工作目录 [#8](https://github.com/zaxtyson/LanZouCloud-CMD/issues/8)
+- 修复了某些特殊情况下回收站崩溃的问题
+- `ls` 命令在文件描述为中英文混合时能够正确对齐 [#8](https://github.com/zaxtyson/LanZouCloud-CMD/issues/8)
+- 下载时可以使用 `Ctrl + C` 强行中断
+
 
 # `v2.3.3` 更新说明
 - 修复上传超过 1GB 的文件时，前 10 个分卷丢失的 Bug [#7](https://github.com/zaxtyson/LanZouCloud-CMD/issues/7)

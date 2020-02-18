@@ -5,6 +5,7 @@ from time import sleep
 import readline
 from lanzou.api import LanZouCloud  # pip install lanzou-api
 from pickle import load, dump
+import requests
 
 
 def check_rec_mode(func):
@@ -24,6 +25,7 @@ class Commander(object):
     NORMAL_MODE = 1  # 正常模式
 
     def __init__(self):
+        self._version = '2.3.4'
         self._prompt = '> '
         self._mode = Commander.NORMAL_MODE
         self._disk = LanZouCloud()
@@ -37,6 +39,7 @@ class Commander(object):
         self._parent_name = ''
         self._work_name = ''
         self._work_id = -1
+        self._last_work_id = -1
         self._config_file = 'config.dat'
         self._config = None
         self._default_down_path = './Download'
@@ -50,7 +53,7 @@ class Commander(object):
         percent = now_size / total_size
         bar_len = 40  # 进度条长总度
         bar_str = '>' * round(bar_len * percent) + '=' * round(bar_len * (1 - percent))
-        print('\r{:.2f}%\t[{}] {:.1f}/{:.1f}MB | {} '.format(
+        print('\r{:.2f}%\t[{}] {:.1f}/{:.1f}MB\t| {} '.format(
             percent * 100, bar_str, now_size / 1048576, total_size / 1048576, file_name), end='')
         if total_size == now_size:
             print('')  # 下载完成换行
@@ -60,13 +63,12 @@ class Commander(object):
         """设置命令行窗口样式"""
         if os.name != 'nt':
             return None
-        os.system('mode con cols=110 lines=35')
+        os.system('mode con cols=125 lines=35')
         os.system('title 蓝奏云CMD控制台')
 
-    @staticmethod
-    def _print_logo():
+    def _print_logo(self):
         """输出logo"""
-        logo_str = """
+        logo_str = f"""
         _                  ______            _____ _                 _ 
        | |                |___  /           /  __ \ |               | |
        | |     __ _ _ __     / /  ___  _   _| /  \/ | ___  _   _  __| |
@@ -74,12 +76,12 @@ class Commander(object):
        | |___| (_| | | | | / /__| (_) | |_| | \__/\ | (_) | |_| | (_| |
        \_____/\____|_| |_|\_____/\___/ \____|\____/_|\___/ \____|\____|
       --------------------------------------------------------------------
-      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: 2.3.3)
+      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: {self._version})
       --------------------------------------------------------------------
             """
         print(logo_str)
 
-    def _refresh(self, dir_id=-1):
+    def refresh(self, dir_id=-1):
         """刷新当前文件夹和路径信息"""
         self._file_list = self._disk.get_file_list(dir_id)
         self._file_id_list = self._disk.get_file_id_list(dir_id)
@@ -88,6 +90,7 @@ class Commander(object):
         self._path_list = self._disk.get_full_path(dir_id)
         self._prompt = '/'.join(list(self._path_list.keys())) + ' > '
         self._work_name = list(self._path_list.keys())[-1]
+        self._last_work_id = self._work_id
         self._work_id = self._path_list.get(self._work_name, -1)
         if dir_id != -1:
             self._parent_name = list(self._path_list.keys())[-2]
@@ -125,8 +128,45 @@ class Commander(object):
             print('ERROR : 缺少解压工具! \n'
                   'Windows 用户请检查 rar.exe 文件是否存在\n'
                   'Linux 用户请执行: sudo apt install rar')
-            sleep(2)
+            sleep(3)
             exit(-1)
+
+    def init_max_size(self):
+        """初始化文件分卷大小"""
+        max_size = self._config.get('max_size')
+        self._disk.set_max_size(max_size)
+
+    def update(self):
+        """检查更新"""
+        print("正在检测更新...")
+        api = "https://api.github.com/repos/zaxtyson/LanZouCloud-CMD/releases/latest"
+        info = requests.get(api).json()
+        tag_name, msg = info['tag_name'], info['body']
+        update_url = info['assets'][0]['browser_download_url']
+        version = tag_name.replace('v', '').split('.')     # x.x.x
+        version2 = self._version.split('.')
+        remote_version = int(version[0]) * 100 + int(version[1]) * 10 + int(version[2])
+        local_version = int(version2[0]) * 100 + int(version2[1]) * 10 + int(version2[2])
+        if remote_version > local_version:
+            tips = f"""
+    程序可以更新 v{self._version} -> {tag_name}
+
+    @更新说明:
+    {msg}
+
+    @ Windows 更新:
+    蓝奏云: https://www.lanzous.com/b0f14h1od
+    Github: {update_url}
+
+    @ Linux 更新:
+    pip install -U lanzou-api
+    git clone https://github.com/zaxtyson/LanZouCloud-CMD.git
+            """
+            input(tips)
+        else:
+            print("(*/ω＼*)暂无更新~ 如有 Bug 或建议,请提 Issue 或发邮件反馈")
+            print("Email: zaxtyson@foxmail.com")
+            print("Github: https://github.com/zaxtyson/LanZouCloud-CMD")
 
     def _check_down_path(self):
         """检查下载路径"""
@@ -142,7 +182,11 @@ class Commander(object):
         if not cookie or self._disk.login_by_cookie(cookie) != LanZouCloud.SUCCESS:
             username = input('输入用户名:')
             password = getpass('输入密码:')
-            if self._disk.login(username, password) != LanZouCloud.SUCCESS:
+            code = self._disk.login(username, password)
+            if code == LanZouCloud.NETWORK_ERROR:
+                print("登录失败 : 网络连接异常")
+                return None
+            elif code == LanZouCloud.FAILED:
                 print('登录失败 : 用户名或密码错误 :(')
                 return None
             # 登录成功保存用户 cookie
@@ -150,10 +194,20 @@ class Commander(object):
             with open(self._config_file, 'wb') as f:
                 dump(self._config, f)
         # 刷新文件列表
-        self._refresh(self._work_id)
+        self.refresh(self._work_id)
 
     def ls(self):
         """列出文件(夹)"""
+
+        def _text_align(text, length) -> str:
+            """中英混合字符串对齐"""
+            text_len = len(text)
+            for char in text:
+                if u'\u4e00' <= char <= u'\u9fff':
+                    text_len += 1
+            space = length - text_len
+            return text + ' ' * space
+
         if self._mode == Commander.REC_MODE:  # 回收站模式
             for file in self._file_list:
                 print("#{0:<12}{1:<14}{2}".format(file['id'], file['time'], file['name']))
@@ -165,8 +219,8 @@ class Commander(object):
         else:  # 正常模式
             for folder in self._dir_list:
                 pwd_str = '✦' if folder['has_pwd'] else '✧'
-                print("#{0:<12}{1:<4}{2:{4}<10} \t {3}/".format(
-                    folder['id'], pwd_str, folder['desc'], folder['name'], chr(12288)  # 中文空格填充，保持对齐
+                print("#{0:<12}{1:<4}{2}{3}/".format(
+                    folder['id'], pwd_str, _text_align(folder['desc'], 24), folder['name']
                 ))
             for file in self._file_list:
                 pwd_str = '✦' if file['has_pwd'] else '✧'
@@ -187,18 +241,22 @@ class Commander(object):
         if self._mode == Commander.REC_MODE:
             if dir_name == '..':
                 self._mode = Commander.NORMAL_MODE
-                self._refresh(self._parent_id)
+                self.refresh(self._parent_id)
                 return None
             print('INFO : 退出回收站请输入 "cd .."')
             return None
         # 正常工作模式
         if dir_name == '..':  # 返回上级路径
-            self._refresh(self._parent_id)
+            self.refresh(self._parent_id)
+        elif dir_name == '/':
+            self.refresh()
+        elif dir_name == '-':
+            self.refresh(self._last_work_id)
         elif dir_name == '.':
             pass
         elif dir_name in self._dir_id_list.keys():
             folder_id = self._dir_id_list.get(dir_name)
-            self._refresh(folder_id)
+            self.refresh(folder_id)
         else:
             print(f'ERROR : 该文件夹不存在: {dir_name}')
 
@@ -215,7 +273,7 @@ class Commander(object):
             self._dir_list.append({'name': name, 'id': dir_id, 'has_pwd': False, 'desc': desc})
             self._dir_id_list.setdefault(name, dir_id)
 
-    def delete(self, name):
+    def rm(self, name):
         """删除文件"""
         if self._file_id_list.get(name, None):  # 文件
             fid = self._file_id_list.get(name)
@@ -247,7 +305,7 @@ class Commander(object):
         else:  # 不存在
             print(f'ERROR : 文件(夹)不存在: {name}')
 
-    def cd_rec(self):
+    def cdrec(self):
         """查看回收站"""
         self._mode = Commander.REC_MODE
         files, folders = self._disk.get_rec_all()
@@ -276,7 +334,7 @@ class Commander(object):
             else:
                 print('ERROR : 回收站清空失败!')
 
-    def recovery(self, name):
+    def rec(self, name):
         """恢复文件"""
         if self._mode != Commander.REC_MODE:
             print('ERROR : 该命令仅在回收站模式下可用 :)')
@@ -298,54 +356,85 @@ class Commander(object):
 
     @check_rec_mode
     def rename(self, name):
-        """重命名文件夹"""
-        fid = self._dir_id_list.get(name)
-        if not fid:
-            print(f'ERROR : ╰（‵□′）╯ 没有这个文件夹的啦: {name}')
+        """重命名文件或文件夹(需要会员)"""
+        is_file = True
+        if self._dir_id_list.get(name, None):
+            fid = self._dir_id_list.get(name)
+            is_file = False
+        elif self._file_id_list.get(name, None):
+            fid = self._file_id_list.get(name)
+        else:
+            print(f'ERROR : 没有这个文件(夹)的啦: {name}')
             return None
-        new_name = input(f'重命名 "{name}" -> ') or None
+
+        new_name = input(f'重命名 "{name}" 为 ') or None
         if not new_name:
             print(f'INFO : 重命名操作取消')
             return None
-        if self._disk.rename_dir(fid, str(new_name)) == LanZouCloud.SUCCESS:
-            pop_id = self._dir_id_list.pop(name)  # 只更新本地文件夹名(调用_refresh()要等 1.5s 才能刷新信息)
-            self._dir_id_list.setdefault(new_name, pop_id)
+
+        if is_file:
+            if self._disk.rename_file(fid, new_name) != LanZouCloud.SUCCESS:
+                print('ERROR : (＃°Д°) 文件重命名失败, 请开通会员，文件名不要带后缀')
+                return None
+            # 只更新本地索引的文件夹名(调用refresh()要等 1.5s 才能刷新信息)
+            self._file_id_list[new_name] = self._file_id_list.pop(name)
+            for file in self._file_list:
+                if file['name'] == name:
+                    file['name'] = new_name
+        else:
+            if self._disk.rename_dir(fid, new_name) != LanZouCloud.SUCCESS:
+                print('ERROR : 文件夹重命名失败')
+                return None
+            self._dir_id_list[new_name] = self._dir_id_list.pop(name)
             for folder in self._dir_list:
                 if folder['name'] == name:
                     folder['name'] = new_name
-        else:
-            print('ERROR : (＃°Д°) 重命名...失败了')
 
-    @check_rec_mode
-    def move_file(self, filename):
-        """移动文件"""
-        file_id = self._file_id_list.get(filename, None)
-        if not file_id:
-            print(f'ERROR : >_< 文件不存在: {filename}')
+    def mv(self, name):
+        """移动文件或文件夹"""
+        is_file = True
+        if self._file_id_list.get(name, None):
+            fid = self._file_id_list.get(name)
+        elif self._dir_id_list.get(name, None):
+            fid = self._dir_id_list.get(name)
+            is_file = False
+        else:
+            print(f"ERROR : 文件(夹)不存在: {name}")
             return None
-        backup = self._dir_id_list  # 备份文件夹 name-id 列表
-        self._dir_id_list = self._disk.get_folder_id_list()  # 方便自动补全
-        self._dir_id_list.pop(self._work_name)  # 不能移动文件到当前文件夹
-        files_per_line = 1
+
+        # 备份当前目录下文件(夹) name-id 列表,TAB 只补全目标文件夹名
+        backup_dir = self._dir_id_list
+        backup_file = self._file_id_list
+        self._file_id_list = {}
+        self._dir_id_list = self._disk.get_folders_name_id()
+        self._dir_id_list.pop(self._work_name)  # 不能移动到当前文件夹
+        if not is_file:
+            self._dir_id_list.pop(name)     # 文件夹不能移动到自身
+
         print('# 请选择目标文件夹(TAB键补全)')
-        for folder, fid in self._dir_id_list.items():
+        for n, folder in enumerate(self._dir_id_list.keys()):
+            if n != 0 and n % 2 == 0:
+                print('')   # 换行
             print(' -> {:<32}'.format(folder), end='\t')
-            if files_per_line == 2:  # 一行输出 x 个文件夹
-                files_per_line = 1
-                print('')
-            else:
-                files_per_line += 1
-        folder_name = input(f'\n移动 "{filename}" -> ') or ' '
+
+        folder_name = input(f'\n移动 "{name}" 到 ') or ' '
         folder_id = self._dir_id_list.get(folder_name, None)
         if not folder_id:
-            print(f'ERROR : 文件夹不存在的啦: {folder_name}')
-            self._dir_id_list = backup  # 还原文件夹 name-id 索引
+            print(f'ERROR : 目标文件夹不存在的啦: {folder_name}')
+            self._file_id_list = backup_file    # 还原当前目录的文件(夹) name-id 索引
+            self._dir_id_list = backup_dir
             return None
-        if self._disk.move_file(file_id, folder_id) == LanZouCloud.SUCCESS:
-            self._refresh(self._work_id)
+        if is_file:
+            code = self._disk.move_file(fid, folder_id)
         else:
-            print('ERROR : (⊙ˍ⊙) 移动文件失败了!')
-        self._dir_id_list = backup  # 还原文件夹 name-id 索引
+            code = self._disk.move_folder(fid, folder_id)
+
+        if code == LanZouCloud.SUCCESS:
+            self.refresh(self._work_id)     # 移动成功，刷新当前目录信息
+        else:
+            print(f"ERROR : 移动 {name} 到 {folder_name} 失败")
+            self._dir_id_list = backup_dir
+            self._file_id_list = backup_file
 
     @check_rec_mode
     def _down_by_id(self, name):
@@ -356,7 +445,7 @@ class Commander(object):
             if code != LanZouCloud.SUCCESS:
                 print(f"ERROR : 文件下载失败: {name}")
         elif self._dir_id_list.get(name, None):  # 如果是文件夹
-            info = self._disk.down_dir_by_id(self._dir_id_list.get(name), save_path, self._show_progress)
+            info = self._disk.down_dir_by_id(self._dir_id_list.get(name), save_path, self._show_progress, mkdir=True)
             if info['code'] != LanZouCloud.SUCCESS:  # 有文件下载失败
                 if not info['failed']:
                     print('INFO : 该文件夹下没有文件的啦')
@@ -399,10 +488,10 @@ class Commander(object):
             else:
                 self._print_error(code)
         elif self._disk.is_folder_url(url):  # 如果是文件夹
-            info = self._disk.down_dir_by_url(url, '', save_path, self._show_progress)
+            info = self._disk.down_dir_by_url(url, '', save_path, self._show_progress, mkdir=True)
             if info['code'] == LanZouCloud.LACK_PASSWORD:
                 pwd = input('输入该文件夹的提取码 : ') or ''
-                info2 = self._disk.down_dir_by_url(url, str(pwd), save_path, self._show_progress)
+                info2 = self._disk.down_dir_by_url(url, str(pwd), save_path, self._show_progress, mkdir=True)
                 if info2['code'] == LanZouCloud.FAILED:  # 部分文件下载失败
                     print(f'ERROR : 以下文件下载失败:')
                     for file in info2['failed']:
@@ -432,17 +521,20 @@ class Commander(object):
             print(f'ERROR : 该路径不存在哦: {path}')
             return None
 
-        if os.path.isdir(path):
-            print(f'INFO : 批量上传文件夹: {path}')
-            info = self._disk.upload_dir(path, self._work_id, self._show_progress)
-            if info['code'] != LanZouCloud.SUCCESS:
-                print(f"ERROR : 以下文件上传失败: {' '.join(info['failed'])}")
-            self._refresh(self._work_id)
-        else:
-            info = self._disk.upload_file(path, self._work_id, self._show_progress)
-            if info['code'] != LanZouCloud.SUCCESS:
-                print(f"ERROR : 文件上传失败: {' '.join(info['failed'])}")
-            self._refresh(self._work_id)
+        try:
+            if os.path.isdir(path):
+                print(f'INFO : 批量上传文件夹: {path}')
+                info = self._disk.upload_dir(path, self._work_id, self._show_progress)
+                if info['code'] != LanZouCloud.SUCCESS:
+                    print(f"ERROR : 以下文件上传失败: {' '.join(info['failed'])}")
+                self.refresh(self._work_id)
+            else:
+                info = self._disk.upload_file(path, self._work_id, self._show_progress)
+                if info['code'] != LanZouCloud.SUCCESS:
+                    print(f"ERROR : 文件上传失败: {' '.join(info['failed'])}")
+                self.refresh(self._work_id)
+        except KeyboardInterrupt:
+            print("\nINFO : 上传已终止")
 
     @check_rec_mode
     def share(self, name):
@@ -488,7 +580,7 @@ class Commander(object):
                 if new_pass == 'off': new_pass = ''
                 if self._disk.set_passwd(fid, str(new_pass), True) != LanZouCloud.SUCCESS:
                     print('ERROR : 设置文件提取码失败')
-                self._refresh(self._work_id)
+                self.refresh(self._work_id)
             else:
                 print('ERROR : 提取码为2-6位字符,关闭请输入off')
         elif self._dir_id_list.get(name, None):  # 文件夹
@@ -499,14 +591,14 @@ class Commander(object):
                 if new_pass == 'off': new_pass = ''
                 if self._disk.set_passwd(fid, str(new_pass), False) != LanZouCloud.SUCCESS:
                     print('ERROR : 设置文件夹提取码失败')
-                self._refresh(self._work_id)
+                self.refresh(self._work_id)
             else:
                 print('ERROR : 提取码为2-12位字符,关闭请输入off')
         else:
             print(f'ERROR : 文件(夹)不存在: {name}')
 
     @check_rec_mode
-    def set_desc(self, name):
+    def desc(self, name):
         """设置文件描述"""
         if self._file_id_list.get(name, None):  # 文件
             fid = self._file_id_list.get(name)
@@ -518,7 +610,7 @@ class Commander(object):
                 return None
             if self._disk.set_desc(fid, str(desc), True) != LanZouCloud.SUCCESS:
                 print(f'ERROR : 文件描述修改失败')
-            self._refresh(self._work_id)
+            self.refresh(self._work_id)
         elif self._dir_id_list.get(name, None):  # 文件夹
             fid = self._dir_id_list.get(name)
             info = self._disk.get_share_info(fid, False)
@@ -529,7 +621,7 @@ class Commander(object):
                     print('INFO : 文件夹描述已关闭')
             else:
                 print(f'ERROR : 文件夹描述修改失败')
-            self._refresh(self._work_id)
+            self.refresh(self._work_id)
         else:
             print(f'ERROR : 文件(夹)不存在: {name}')
 
@@ -544,6 +636,21 @@ class Commander(object):
         else:
             print('ERROR : 路径非法,取消修改')
 
+    def setsize(self):
+        """设置分卷大小"""
+        print(f"当前分卷大小(MB): {self._config.get('max_size')}")
+        max_size = input('修改为 -> ')
+        if not max_size.isnumeric():
+            print("ERROR: 请输入大于 100 的数字")
+            return None
+        if self._disk.set_max_size(int(max_size)) != LanZouCloud.SUCCESS:
+            print("ERROR: 自定义分卷大小应该大于 100 MB")
+            return None
+
+        self._config['max_size'] = int(max_size)
+        with open(self._config_file, 'wb') as f:
+            dump(self._config, f)
+
     def logout(self):
         """注销"""
         self.clear()
@@ -554,13 +661,14 @@ class Commander(object):
         self._parent_id = -1
         self._parent_name = ''
         self._work_id = -1
+        self._last_work_id = -1
         self._work_name = ''
         self._config['cookie'] = None
         with open(self._config_file, 'wb') as f:
             dump(self._config, f)
 
     @staticmethod
-    def print_help():
+    def help():
         help_text = """
     • CMD版蓝奏云控制台，按 TAB 自动补全路径
     • 支持大文件上传，解除文件格式限制
@@ -568,6 +676,7 @@ class Commander(object):
     
     命令帮助 :
     help        显示本信息
+    update      检查更新
     refresh     强制刷新文件列表信息
     login       登录网盘/切换账号
     logout      注销当前账号
@@ -583,9 +692,10 @@ class Commander(object):
     down        下载文件(夹)
     passwd      设置文件(夹)提取码
     setpath     设置默认下载路径
-    rename      重命名文件夹
+    setsize     设置文件分卷大小
+    rename      重命名文件(夹)
     desc        修改文件(夹)描述
-    mv          移动文件到某个文件夹
+    mv          移动文件(夹)
     bye         退出本程序
     
     更详细的介绍请参考本项目的 Github 主页:
@@ -618,60 +728,33 @@ class Commander(object):
             print('INFO : 退出本程序请输入 bye')
             return -1
         if len(args) == 0: return None
-        cmd = args[0]
-        first_arg = ' '.join(args[1:])
+        cmd = args[0]   # 命令
+        arg = ' '.join(args[1:])    # 参数(可带有空格)
 
-        if cmd == 'rm':
-            self.delete(first_arg)
+        no_arg_cmd = ['ls', 'login', 'clean', 'cdrec', 'clear', 'setpath', 'setsize', 'help', 'update']
+        cmd_with_arg = ['rm', 'cd', 'mkdir', 'rec', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc']
+
+        if cmd in no_arg_cmd:
+            exec(f"self.{cmd}()")
+        elif cmd in cmd_with_arg:
+            exec(f"self.{cmd}(r'{arg}')")
         elif cmd == 'refresh':
-            self._refresh(self._work_id)
-        elif cmd == 'ls':
-            self.ls()
-        elif cmd == 'login':
-            self.login()
+            self.refresh(self._work_id)
         elif cmd == 'logout':
             self.logout()
             self.login()
-        elif cmd == 'clean':
-            self.clean()
-        elif cmd == 'cdrec':
-            self.cd_rec()
-        elif cmd == 'rec':
-            self.recovery(first_arg)
-        elif cmd == 'clear':
-            self.clear()
-        elif cmd == 'cd':
-            self.cd(first_arg)
-        elif cmd == 'mkdir':
-            self.mkdir(first_arg)
-        elif cmd == 'upload':
-            self.upload(first_arg)
-        elif cmd == 'down':
-            self.down(first_arg)
-        elif cmd == 'share':
-            self.share(first_arg)
-        elif cmd == 'passwd':
-            self.passwd(first_arg)
-        elif cmd == 'setpath':
-            self.setpath()
-        elif cmd == 'rename':
-            self.rename(first_arg)
-        elif cmd == 'mv':
-            self.move_file(first_arg)
-        elif cmd == 'desc':
-            self.set_desc(first_arg)
-        elif cmd == 'help':
-            self.print_help()
         elif cmd == 'bye':
             exit(0)
         else:
-            print('ERROR : 命令不存在哦，输入help查看帮助')
+            print('ERROR : 命令不存在哦，输入 help 查看帮助')
 
 
 if __name__ == '__main__':
     lanzou_cmd = Commander()
     lanzou_cmd.set_console_style()
     lanzou_cmd.check_rar_tool()
+    lanzou_cmd.init_max_size()
+    lanzou_cmd.update()
     lanzou_cmd.login()
     while True:
         lanzou_cmd.process_a_cmd()
