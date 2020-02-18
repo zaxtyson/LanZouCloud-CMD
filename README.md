@@ -41,6 +41,7 @@
 - 修复了某些特殊情况下回收站崩溃的问题
 - `ls` 命令在文件描述为中英文混合时能够正确对齐 [#8](https://github.com/zaxtyson/LanZouCloud-CMD/issues/8)
 - 下载时可以使用 `Ctrl + C` 强行中断
+- 修复文件上传时间的错误
 
 
 # `v2.3.3` 更新说明
