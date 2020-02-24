@@ -12,11 +12,13 @@
 
 # 界面
 
-![ui.png](https://upload.cc/i1/2020/02/18/GU7DLu.png)
+![ui.png](https://upload.cc/i1/2020/02/24/8jlCXh.png)
 
 # 说明
+- 解除官方上传限制，支持批量上传下载
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 在 Linux 平台使用时，您需要先安装 `rar` 工具
+- 如果 Windows 平台缺少 `readline`，请执行 `pip install pyreadline`
 - 默认下载路径为 `./Download`，请使用 `setpath` 命令修改
 - 默认分卷大小为 100 MB, 会员用户请使用 `setsize` 命令修改
 - 未登录时可使用 `down URL` 的方式下载文件(夹)~
@@ -30,6 +32,14 @@
 - 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# `v2.3.5` 更新说明
+- 修复回收站文件夹中文件名过长，导致后缀丢失，程序闪退的问题 [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14)
+- 修复官方启用滑动验证导致无法登录的问题 [#15](https://github.com/zaxtyson/LanZouCloud-CMD/issues/15)
+- 新增 `clogin` 命令支持使用 `cookie` 登录(防止某天 `login` 完全失效)
+    - Cookie 内容见浏览器地址栏前的🔒 (Chrome):
+    - `woozooo.com -> Cookie -> ylogin`
+    - `pc.woozooo.com -> Cookie -> phpdisk_info`
 
 # `v2.3.4` 更新说明
 - 新增 `update` 命令检查更新(每次启动会检查一次)

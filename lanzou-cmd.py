@@ -25,7 +25,7 @@ class Commander(object):
     NORMAL_MODE = 1  # 正常模式
 
     def __init__(self):
-        self._version = '2.3.4'
+        self._version = '2.3.5'
         self._prompt = '> '
         self._mode = Commander.NORMAL_MODE
         self._disk = LanZouCloud()
@@ -63,7 +63,7 @@ class Commander(object):
         """设置命令行窗口样式"""
         if os.name != 'nt':
             return None
-        os.system('mode con cols=125 lines=35')
+        os.system('mode con cols=125 lines=40')
         os.system('title 蓝奏云CMD控制台')
 
     def _print_logo(self):
@@ -80,6 +80,11 @@ class Commander(object):
       --------------------------------------------------------------------
             """
         print(logo_str)
+
+    def update_config(self):
+        """更新配置文件"""
+        with open(self._config_file, 'wb') as f:
+            dump(self._config, f)
 
     def refresh(self, dir_id=-1):
         """刷新当前文件夹和路径信息"""
@@ -140,7 +145,11 @@ class Commander(object):
         """检查更新"""
         print("正在检测更新...")
         api = "https://api.github.com/repos/zaxtyson/LanZouCloud-CMD/releases/latest"
-        info = requests.get(api).json()
+        try:
+            info = requests.get(api).json()
+        except (requests.RequestException, AttributeError):
+            input("ERROR: 检查更新时发生异常")
+            return None
         tag_name, msg = info['tag_name'], info['body']
         update_url = info['assets'][0]['browser_download_url']
         version = tag_name.replace('v', '').split('.')     # x.x.x
@@ -148,21 +157,15 @@ class Commander(object):
         remote_version = int(version[0]) * 100 + int(version[1]) * 10 + int(version[2])
         local_version = int(version2[0]) * 100 + int(version2[1]) * 10 + int(version2[2])
         if remote_version > local_version:
-            tips = f"""
-    程序可以更新 v{self._version} -> {tag_name}
-
-    @更新说明:
-    {msg}
-
-    @ Windows 更新:
-    蓝奏云: https://www.lanzous.com/b0f14h1od
-    Github: {update_url}
-
-    @ Linux 更新:
-    pip install -U lanzou-api
-    git clone https://github.com/zaxtyson/LanZouCloud-CMD.git
-            """
-            input(tips)
+            print(f"程序可以更新 v{self._version} -> {tag_name}")
+            print(f"\n@更新说明:\n{msg}")
+            print(f"\n@Windows 更新:")
+            print(f"蓝奏云: https://www.lanzous.com/b0f14h1od")
+            print(f"Github: {update_url}")
+            print("\n@Linux 更新:")
+            print("pip install -U lanzou-api")
+            print("git clone https://github.com/zaxtyson/LanZouCloud-CMD.git")
+            input()
         else:
             print("(*/ω＼*)暂无更新~ 如有 Bug 或建议,请提 Issue 或发邮件反馈")
             print("Email: zaxtyson@foxmail.com")
@@ -173,6 +176,23 @@ class Commander(object):
         if not self._config.get('path'):
             print('请设置文件下载路径')
             self.setpath()
+
+    def clogin(self):
+        """使用 cookie 登录"""
+        print("请在浏览器端登录: https://pc.woozooo.com/")
+        print("设置 Cookie 内容:")
+        ylogin = input("ylogin=")
+        disk_info = input("phpdisk_info=")
+        if not ylogin or not disk_info:
+            print("ERROR: 请输入正确的 Cookie 信息")
+            return None
+        cookie = {"ylogin": str(ylogin), "phpdisk_info": disk_info}
+        if self._disk.login_by_cookie(cookie) == LanZouCloud.SUCCESS:
+            self._config['cookie'] = cookie
+            self.update_config()
+            self.refresh(self._work_id)
+        else:
+            print("ERROR : 登录失败,请检查 Cookie 是否正确")
 
     def login(self):
         """登录网盘"""
@@ -191,8 +211,7 @@ class Commander(object):
                 return None
             # 登录成功保存用户 cookie
             self._config['cookie'] = self._disk.get_cookie()
-            with open(self._config_file, 'wb') as f:
-                dump(self._config, f)
+            self.update_config()
         # 刷新文件列表
         self.refresh(self._work_id)
 
@@ -631,8 +650,7 @@ class Commander(object):
         path = input('修改为 -> ').strip("\"\' ")
         if os.path.isdir(path):
             self._config['path'] = path
-            with open(self._config_file, 'wb') as f:
-                dump(self._config, f)
+            self.update_config()
         else:
             print('ERROR : 路径非法,取消修改')
 
@@ -648,8 +666,7 @@ class Commander(object):
             return None
 
         self._config['max_size'] = int(max_size)
-        with open(self._config_file, 'wb') as f:
-            dump(self._config, f)
+        self.update_config()
 
     def logout(self):
         """注销"""
@@ -664,8 +681,7 @@ class Commander(object):
         self._last_work_id = -1
         self._work_name = ''
         self._config['cookie'] = None
-        with open(self._config_file, 'wb') as f:
-            dump(self._config, f)
+        self.update_config()
 
     @staticmethod
     def help():
@@ -678,7 +694,8 @@ class Commander(object):
     help        显示本信息
     update      检查更新
     refresh     强制刷新文件列表信息
-    login       登录网盘/切换账号
+    login       使用账号密码登录网盘
+    clogin      使用 Cookie 登录网盘
     logout      注销当前账号
     ls          列出文件(夹)
     cd          切换工作目录
@@ -731,7 +748,7 @@ class Commander(object):
         cmd = args[0]   # 命令
         arg = ' '.join(args[1:])    # 参数(可带有空格)
 
-        no_arg_cmd = ['ls', 'login', 'clean', 'cdrec', 'clear', 'setpath', 'setsize', 'help', 'update']
+        no_arg_cmd = ['ls', 'login', 'clogin', 'clean', 'cdrec', 'clear', 'setpath', 'setsize', 'help', 'update']
         cmd_with_arg = ['rm', 'cd', 'mkdir', 'rec', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc']
 
         if cmd in no_arg_cmd:
