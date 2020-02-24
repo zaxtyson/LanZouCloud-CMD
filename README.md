@@ -40,6 +40,7 @@
     - Cookie 内容见浏览器地址栏前的🔒 (Chrome):
     - `woozooo.com -> Cookie -> ylogin`
     - `pc.woozooo.com -> Cookie -> phpdisk_info`
+- 因为使用 `Python3.8.1 X64` 打包，导致程序大了一圈😭,您可以使用 `Pyinstaller` 自行打包
 
 # `v2.3.4` 更新说明
 - 新增 `update` 命令检查更新(每次启动会检查一次)
