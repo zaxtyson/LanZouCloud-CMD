@@ -34,7 +34,7 @@ class Recovery:
                 error('回收站清空失败!')
 
     def rm(self, name):
-        """传递删除文件(夹)"""
+        """彻底删除文件(夹)"""
         if file := self._file_list.find_by_name(name):  # 删除文件
             if self._disk.delete_rec(file.id, is_file=True) == LanZouCloud.SUCCESS:
                 self._file_list.pop_by_id(file.id)
@@ -66,7 +66,7 @@ class Recovery:
             error('(#`O′) 没有这个文件啊喂')
 
     def run(self):
-        """处理一条命令"""
+        """在回收站模式下运行"""
         choice_list = self._file_list.all_name + self._folder_list.all_name
         cmd_list = ['clean', 'cd', 'rec', 'rm']
         set_completer(choice_list, cmd_list=cmd_list)
