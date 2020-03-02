@@ -15,6 +15,7 @@
 ![cmd.png](https://upload.cc/i1/2020/03/03/khY4CQ.png)
 
 # 说明
+- 请使用 Python 3.8+ 运行
 - 解除官方上传限制，支持批量上传下载
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 如果 Windows 平台缺少 `readline`，请执行 `pip install pyreadline`
