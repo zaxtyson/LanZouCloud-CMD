@@ -12,12 +12,11 @@
 
 # 界面
 
-![ui.png](https://upload.cc/i1/2020/02/24/8jlCXh.png)
+![cmd.png](https://upload.cc/i1/2020/03/03/khY4CQ.png)
 
 # 说明
 - 解除官方上传限制，支持批量上传下载
 - 为了方便管理，API独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
-- 在 Linux 平台使用时，您需要先安装 `rar` 工具
 - 如果 Windows 平台缺少 `readline`，请执行 `pip install pyreadline`
 - 默认下载路径为 `./Download`，请使用 `setpath` 命令修改
 - 默认分卷大小为 100 MB, 会员用户请使用 `setsize` 命令修改
@@ -32,6 +31,15 @@
 - 在蓝奏云网盘下载 [Windows版](https://www.lanzous.com/b0f14h1od) 
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
+
+# `v2.4.0`
+- 放弃分段压缩，使用更复杂的方式上传大文件。分段数据文件名、文件大小、文件后缀随机，下载时自动处理。
+- 放弃使用修改文件名的方式绕过上传格式限制。上传的文件末尾被添加了 512 字节的信息，储存真实文件名，
+下载时自动检测并截断，不会影响文件 hash。一般情况下，不截断此信息不影响文件的使用，但纯文本类文件会受影响(比如代码文件)，
+建议压缩后上传。
+- 现在可以在网盘不同路径下创建同名文件夹，不再添加 `_` 区分，移动文件时支持绝对路径补全。
+- 上传/下载失败会立即提醒并显示原因，不需要等待全部任务完成。
+- 回收站稍微好看了点~
 
 # `v2.3.5` 更新说明
 - 修复回收站文件夹中文件名过长，导致后缀丢失，程序闪退的问题 [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14)

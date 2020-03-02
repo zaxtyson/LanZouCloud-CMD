@@ -1,16 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 # 本文件用于打包 Windows 程序
-# pip install lanzou-api -U
-# pyinstaller -F lanzou-cmd.spec
+# 建议在虚拟环境下打包
+# pyinstaller -F build_exe.spec
 
 block_cipher = None
 
 
-a = Analysis(['lanzou-cmd.py'],
+a = Analysis(['lanzou_cmd.py'],
              pathex=['.'],
              binaries=[],
-             datas=[('config.dat','.'),('rar.exe','.')],
+             datas=[('user.dat','.'),('lanzou','.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
