@@ -91,6 +91,7 @@ class Commander:
     def logout(self):
         """注销"""
         clear_screen()
+        self._prompt = '> '
         self._disk.logout()
         self._file_list.clear()
         self._dir_list.clear()
