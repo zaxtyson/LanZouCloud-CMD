@@ -2,7 +2,7 @@
 
 # 本文件用于打包 Windows 程序
 # 建议在虚拟环境下打包
-# pyinstaller -F build_exe.spec
+# pyinstaller --clean -F build_exe.spec
 
 block_cipher = None
 
@@ -10,7 +10,7 @@ block_cipher = None
 a = Analysis(['lanzou_cmd.py'],
              pathex=['.'],
              binaries=[],
-             datas=[('user.dat','.'),('lanzou','.')],
+             datas=[('user.dat','.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
