@@ -22,6 +22,7 @@ class Commander:
         self._work_name = ''
         self._work_id = -1
         self._last_work_id = -1
+        self._reader_mode = config.reader_mode
         self._disk.set_max_size(config.max_size)
 
     @staticmethod
@@ -35,6 +36,18 @@ class Commander:
     @staticmethod
     def update():
         check_update()
+
+    def rmode(self):
+        """适用于屏幕阅读器用户的显示方式"""
+        choice = input("以适宜屏幕阅读器的方式显示(y): ")
+        if choice and choice.lower() == 'y':
+            config.reader_mode = True
+            self._reader_mode = True
+            info("已启用 Reader Mode")
+        else:
+            config.reader_mode = False
+            self._reader_mode = False
+            info("已关闭 Reader Mode")
 
     def cdrec(self):
         """进入回收站模式"""
@@ -106,14 +119,20 @@ class Commander:
 
     def ls(self):
         """列出文件(夹)"""
-        for folder in self._dir_list:
-            pwd_str = '✦' if folder.has_pwd else '✧'
-            print("#{0:<12}{1:<4}{2}{3}/".format(
-                folder.id, pwd_str, text_align(folder.desc, 24), folder.name))
-        for file in self._file_list:
-            pwd_str = '✦' if file.has_pwd else '✧'
-            print("#{0:<12}{1:<4}{2:<14}{3:<10}{4}".format(
-                file.id, pwd_str, file.time, file.size, file.name))
+        if self._reader_mode:  # 方便屏幕阅读器阅读
+            for folder in self._dir_list:
+                print(f"{folder.name}/  {folder.desc}")
+            for file in self._file_list:
+                print(f"{file.name}  大小:{file.size}  上传时间:{file.time}")
+        else:  # 普通用户显示方式
+            for folder in self._dir_list:
+                pwd_str = '✦' if folder.has_pwd else '✧'
+                print("#{0:<12}{1:<4}{2}{3}/".format(
+                    folder.id, pwd_str, text_align(folder.desc, 24), folder.name))
+            for file in self._file_list:
+                pwd_str = '✦' if file.has_pwd else '✧'
+                print("#{0:<12}{1:<4}{2:<14}{3:<10}{4}".format(
+                    file.id, pwd_str, file.time, file.size, file.name))
 
     def cd(self, dir_name):
         """切换工作目录"""
@@ -425,7 +444,7 @@ class Commander:
         cmd, arg = args[0], ' '.join(args[1:])  # 命令, 参数(可带有空格)
 
         no_arg_cmd = ['ls', 'login', 'clogin', 'cdrec', 'clear', 'setpath', 'setsize', 'help', 'update', 'refresh',
-                      'logout']
+                      'logout', 'rmode']
         cmd_with_arg = ['rm', 'cd', 'mkdir', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc']
 
         if cmd in no_arg_cmd:

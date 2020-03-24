@@ -1,4 +1,5 @@
 from lanzou.cmder.utils import *
+from lanzou.cmder import config
 
 
 class Recovery:
@@ -6,21 +7,31 @@ class Recovery:
 
     def __init__(self, disk: LanZouCloud):
         self._prompt = 'Recovery > '
+        self._reader_mode = config.reader_mode
         self._disk = disk
 
         print("回收站数据加载中...")
         self._file_list, self._folder_list = disk.get_rec_all()
 
     def ls(self):
-        for file in self._file_list:
-            print("#{0:<12}{1:<14}{2}".format(file.id, file.time, file.name))
-        for folder in self._folder_list:
-            print("#{0:<12}{1:<14}▣ {2}".format(folder.id, folder.time, folder.name))
-            for i, file in enumerate(folder.files, 1):
-                if i == len(folder.files):
-                    print("{0:<27}└─ [{1}]\t{2}".format('', file.size, file.name))
-                else:
-                    print("{0:<27}├─ [{1}]\t{2}".format('', file.size, file.name))
+        if self._reader_mode:  # 适宜屏幕阅读器的显示方式
+            for file in self._file_list:
+                print(f"{file.name}  上传时间:{file.time}")
+            for folder in self._folder_list:
+                print(f"{folder.name}/ 创建时间:{folder.time}")
+                for i, file in enumerate(folder.files, 1):
+                    print(f"{i}:{file.name}  大小:{file.size}")
+                print("")
+        else:  # 普通用户的显示方式
+            for file in self._file_list:
+                print("#{0:<12}{1:<14}{2}".format(file.id, file.time, file.name))
+            for folder in self._folder_list:
+                print("#{0:<12}{1:<14}▣ {2}".format(folder.id, folder.time, folder.name))
+                for i, file in enumerate(folder.files, 1):
+                    if i == len(folder.files):
+                        print("{0:<27}└─ [{1}]\t{2}".format('', file.size, file.name))
+                    else:
+                        print("{0:<27}├─ [{1}]\t{2}".format('', file.size, file.name))
 
     def clean(self):
         """清空回收站"""

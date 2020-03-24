@@ -124,6 +124,7 @@ def print_help():
     命令帮助 :
     help        显示本信息
     update      检查更新
+    rmode       屏幕阅读器模式
     refresh     强制刷新文件列表
     login       使用账号密码登录网盘
     clogin      使用 Cookie 登录网盘

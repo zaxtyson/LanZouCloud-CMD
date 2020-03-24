@@ -43,6 +43,15 @@ class Config:
         self._config['max_size'] = value
         self._save()
 
+    @property
+    def reader_mode(self):
+        return self._config.get('reader_mode')
+
+    @reader_mode.setter
+    def reader_mode(self, value: bool):
+        self._config['reader_mode'] = value
+        self._save()
+
 
 # 全局配置对象
 config = Config()
