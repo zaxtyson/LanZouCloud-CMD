@@ -595,7 +595,7 @@ class LanZouCloud(object):
             need_delete = True
 
         # 文件已经存在同名文件就删除
-        filename = os.path.basename(file_path)
+        filename = name_format(os.path.basename(file_path))
         file_list = self.get_file_list(folder_id)
         if file_list.find_by_name(filename):
             self.delete(file_list.find_by_name(filename).id)
@@ -739,7 +739,7 @@ class LanZouCloud(object):
                         callback(info.name, total_size, now_size)
         # 尝试解析文件报尾
         file_info = un_serialize(last_512_bytes[-512:])
-        if file_info is not None:
+        if file_info is not None and 'padding' in file_info:  # 大文件的记录文件也可以反序列化出 name,但是没有 padding
             real_name = file_info['name']
             new_file_path = save_path + os.sep + real_name
             logger.debug(f"Find meta info: {real_name=}")
