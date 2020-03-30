@@ -6,7 +6,7 @@ from lanzou.cmder import config
 from lanzou.cmder.utils import *
 from lanzou.cmder.recovery import Recovery
 from webbrowser import open_new_tab
-
+from sys import exit as exit_cmd
 
 class Commander:
     """蓝奏网盘命令行"""
@@ -452,6 +452,6 @@ class Commander:
         elif cmd in cmd_with_arg:
             getattr(self, cmd)(arg)
         elif cmd == 'bye':
-            exit(0)
+            exit_cmd(0)
         else:
             error('命令不存在哦，输入 help 查看帮助')
