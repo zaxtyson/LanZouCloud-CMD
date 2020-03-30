@@ -288,36 +288,30 @@ class LanZouCloud(object):
     def get_dir_list(self, folder_id=-1) -> FolderList:
         """获取子文件夹列表"""
         folder_list = FolderList()
-        para = {'item': 'files', 'action': 'index', 'folder_node': 1, 'folder_id': folder_id}
-        html = self._get(self._mydisk_url, params=para)
-        if not html:
+        post_data = {'task': 47, 'folder_id': folder_id}
+        resp = self._post(self._doupload_url, post_data)
+        if not resp:
             return folder_list
-        info = re.findall(r'&nbsp;(.+?)</a>&nbsp;.+"folk(\d+)"(.*?)>.+#BBBBBB">\[?(.*?)\.*\]?</font>', html.text)
-        for folder_name, fid, pwd_flag, desc in info:
-            folder_list.append(Folder(
-                id=int(fid),
-                name=folder_name.replace('&amp;', '&'),  # 修复网页中的 &amp; 为 &
-                has_pwd=True if pwd_flag else False,  # 有密码时 pwd_flag 值为 style="display:initial"
-                desc=desc  # 文件夹描述信息
-            ))
+        for folder in resp.json()['text']:
+            folder_list.append(
+                Folder(
+                    id=int(folder['fol_id']),
+                    name=folder['name'],
+                    has_pwd=True if folder['onof'] == 1 else False,
+                    desc=folder['folder_des'].strip('[]')
+                ))
         return folder_list
 
     def get_full_path(self, folder_id=-1) -> FolderList:
         """获取文件夹完整路径"""
         path_list = FolderList()
         path_list.append(FolderId('LanZouCloud', -1))
-        html = self._get(self._mydisk_url, params={'item': 'files', 'action': 'index', 'folder_id': folder_id})
-        if not html:
+        post_data = {'task': 47, 'folder_id': folder_id}
+        resp = self._post(self._doupload_url, post_data)
+        if not resp:
             return path_list
-        html = remove_notes(html.text)
-        path = re.findall(r'&raquo;&nbsp;.+?folder_id=(\d+)">.+?&nbsp;(.+?)</a>', html)
-        for fid, name in path:
-            path_list.append(FolderId(name, int(fid)))
-        # 获取当前文件夹名称
-        if folder_id != -1:
-            current_folder = re.search(r'align="(top|absmiddle)" />&nbsp;(.+?)\s<(span|font)', html).group(2).replace(
-                '&amp;', '&')
-            path_list.append(FolderId(current_folder, folder_id))
+        for folder in resp.json()['info']:
+            path_list.append(FolderId(id=int(folder['folderid']), name=folder['name']))
         return path_list
 
     def get_file_info_by_url(self, share_url, pwd='') -> FileDetail:

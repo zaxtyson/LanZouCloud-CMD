@@ -33,6 +33,9 @@
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
 
+# `2.4.2`
+- 紧急修复了蓝奏云网页端变化导致无法显示文件夹的 Bug
+
 # `v2.4.1`
 - 修复使用 URL 下载大文件失败的问题
 - 修复上传小文件时没有去除非法字符的问题
