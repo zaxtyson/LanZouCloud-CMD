@@ -1,6 +1,7 @@
 import os
 import readline
 import requests
+from platform import system as platform
 from lanzou.api import LanZouCloud
 from lanzou.cmder import version
 
@@ -35,6 +36,8 @@ def why_error(code):
         return '解压过程异常'
     elif code == LanZouCloud.NETWORK_ERROR:
         return '网络连接异常'
+    elif code == LanZouCloud.CAPTCHA_ERROR:
+        return '验证码错误'
     else:
         return '未知错误'
 
@@ -66,6 +69,23 @@ def show_down_failed(code, file):
 def show_upload_failed(code, filename):
     """文件上传失败时的回调函数"""
     error(f"文件上传失败,原因: {why_error(code)},文件名: {filename}")
+
+
+def captcha_handler(img_data):
+    """处理下载时出现的验证码"""
+    img_path = os.getcwd() + os.sep + 'captcha.png'
+    with open(img_path, 'wb') as f:
+        f.write(img_data)
+    m_platform = platform()
+    if m_platform == 'Darwin':
+        os.system(f'open {img_path}')
+    elif m_platform == 'Linux':
+        os.system(f'xdg-open {img_path}')
+    else:
+        os.startfile(img_path)
+    ans = input('\n请输入验证码:')
+    os.remove(img_path)
+    return ans
 
 
 def text_align(text, length) -> str:
@@ -126,6 +146,7 @@ def print_help():
     update      检查更新
     rmode       屏幕阅读器模式
     refresh     强制刷新文件列表
+    xghost      删除"幽灵"文件夹
     login       使用账号密码登录网盘
     clogin      使用 Cookie 登录网盘
     logout      注销当前账号

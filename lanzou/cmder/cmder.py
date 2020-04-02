@@ -8,6 +8,7 @@ from lanzou.cmder.recovery import Recovery
 from webbrowser import open_new_tab
 from sys import exit as exit_cmd
 
+
 class Commander:
     """蓝奏网盘命令行"""
 
@@ -24,6 +25,7 @@ class Commander:
         self._last_work_id = -1
         self._reader_mode = config.reader_mode
         self._disk.set_max_size(config.max_size)
+        self._disk.set_captcha_handler(captcha_handler)
 
     @staticmethod
     def clear():
@@ -54,6 +56,15 @@ class Commander:
         rec = Recovery(self._disk)
         rec.run()
         self.refresh()
+
+    def xghost(self):
+        """扫描并删除幽灵文件夹"""
+        choice = input("需要清理幽灵文件夹吗(y): ")
+        if choice and choice.lower() == 'y':
+            self._disk.clean_ghost_folders()
+            info("清理已完成")
+        else:
+            info("清理操作已取消")
 
     def refresh(self, dir_id=None):
         """刷新当前文件夹和路径信息"""
@@ -252,7 +263,7 @@ class Commander:
         if file := self._file_list.find_by_name(name):  # 如果是文件
             code = self._disk.down_file_by_id(file.id, save_path, show_progress)
             if code != LanZouCloud.SUCCESS:
-                error(f"文件下载失败: {name}")
+                error(f"文件下载失败: {name}, 原因: {why_error(code)}")
         elif folder := self._dir_list.find_by_name(name):  # 如果是文件夹
             self._disk.down_dir_by_id(folder.id, save_path, callback=show_progress, mkdir=True,
                                       failed_callback=show_down_failed)
@@ -428,12 +439,12 @@ class Commander:
         """处理一条用户命令"""
         choice_list = self._file_list.all_name + self._dir_list.all_name
         cmd_list = ['login', 'clogin', 'logout', 'ls', 'clear', 'cdrec', 'setpath', 'setsize', 'help', 'update', 'rm',
-                    'cd', 'mkdir', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc', 'refresh']
+                    'cd', 'mkdir', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc', 'refresh', 'xghost']
 
         set_completer(choice_list, cmd_list=cmd_list)
 
         try:
-            args = input(self._prompt).split()
+            args = input(self._prompt).split(' ', 1)
             if len(args) == 0:
                 return None
         except KeyboardInterrupt:
@@ -441,10 +452,10 @@ class Commander:
             info('退出本程序请输入 bye')
             return None
 
-        cmd, arg = args[0], ' '.join(args[1:])  # 命令, 参数(可带有空格)
+        cmd, arg = (args[0], '') if len(args) == 1 else (args[0], args[1])  # 命令, 参数(可带有空格, 没有参数就设为空)
 
         no_arg_cmd = ['ls', 'login', 'clogin', 'cdrec', 'clear', 'setpath', 'setsize', 'help', 'update', 'refresh',
-                      'logout', 'rmode']
+                      'logout', 'rmode', 'xghost']
         cmd_with_arg = ['rm', 'cd', 'mkdir', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc']
 
         if cmd in no_arg_cmd:

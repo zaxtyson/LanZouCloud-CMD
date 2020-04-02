@@ -13,5 +13,8 @@ if __name__ == '__main__':
             commander.run()
         except KeyboardInterrupt:
             pass
-        except Exception as e:
-            error(e)
+        except Exception as e:  # 捕获意外发生的异常, 以便定位 bug
+            raise_file = e.__traceback__.tb_frame.f_globals['__file__']
+            raise_line = e.__traceback__.tb_lineno
+            msg = f'File: {raise_file}[{raise_line}]\nReason: {e}'
+            error(msg)
