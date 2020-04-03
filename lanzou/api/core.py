@@ -386,8 +386,11 @@ class LanZouCloud(object):
         for folder in folder_with_ghost:
             if not real_folders.find_by_id(folder.id):
                 logger.debug(f"Delete ghost folder: {folder.name} #{folder.id}")
-                self.delete(folder.id, False)
-                self.delete_rec(folder.id, False)
+                if self.delete(folder.id, False) != LanZouCloud.SUCCESS:
+                    return LanZouCloud.FAILED
+                if self.delete_rec(folder.id, False) != LanZouCloud.SUCCESS:
+                    return LanZouCloud.FAILED
+        return LanZouCloud.SUCCESS
 
     def get_full_path(self, folder_id=-1) -> FolderList:
         """获取文件夹完整路径"""
@@ -459,8 +462,8 @@ class LanZouCloud(object):
         else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
             para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
             # 文件名位置变化很多
-            f_name = re.search(r'<div class="filethetext".+?>(.+?)</div>', first_page) or \
-                     re.search(r'<div style="font-size.+?>(.+?)</div>', first_page) or \
+            f_name = re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
+                     re.search(r'<div style="font-size.+?>([^<>].+?)</div>', first_page) or \
                      re.search(r"var filename = '(.+?)';", first_page)
             f_name = f_name.group(1) if f_name else "未匹配到文件名"
             # 文件时间，如果没有就视为今天

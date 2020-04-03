@@ -1,7 +1,9 @@
 import os
+from platform import system as platform
+
 import readline
 import requests
-from platform import system as platform
+
 from lanzou.api import LanZouCloud
 from lanzou.cmder import version
 
@@ -48,27 +50,6 @@ def set_console_style():
         return None
     os.system('mode 120, 40')
     os.system(f'title 蓝奏云 CMD 控制台 {version}')
-
-
-def show_progress(file_name, total_size, now_size):
-    """显示进度条的回调函数"""
-    percent = now_size / total_size
-    bar_len = 40  # 进度条长总度
-    bar_str = '>' * round(bar_len * percent) + '=' * round(bar_len * (1 - percent))
-    print('\r{:.2f}%\t[{}] {:.1f}/{:.1f}MB | {} '.format(
-        percent * 100, bar_str, now_size / 1048576, total_size / 1048576, file_name), end='')
-    if total_size == now_size:
-        print('')  # 下载完成换行
-
-
-def show_down_failed(code, file):
-    """文件下载失败时的回调函数"""
-    error(f"文件下载失败,原因: {why_error(code)},文件名: {file.name},URL: {file.url}")
-
-
-def show_upload_failed(code, filename):
-    """文件上传失败时的回调函数"""
-    error(f"文件上传失败,原因: {why_error(code)},文件名: {filename}")
 
 
 def captcha_handler(img_data):
@@ -139,17 +120,18 @@ def print_help():
     help_text = f"""
     • CMD 版蓝奏云控制台 v{version}
     • 支持大文件上传，无视文件格式限制
-    • 支持提取直链，批量下载上传
+    • 支持直链提取，批量上传下载，断点续传功能
     
     命令帮助 :
     help        显示本信息
     update      检查更新
     rmode       屏幕阅读器模式
     refresh     强制刷新文件列表
-    xghost      删除"幽灵"文件夹
+    xghost      清理"幽灵"文件夹
     login       使用账号密码登录网盘
     clogin      使用 Cookie 登录网盘
     logout      注销当前账号
+    jobs        查看后台任务列表   
     ls          列出文件(夹)
     cd          切换工作目录
     cdrec       进入回收站

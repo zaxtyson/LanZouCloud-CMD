@@ -1,12 +1,14 @@
 from getpass import getpass
-from lanzou.api.types import *
-from lanzou.api.utils import is_file_url, is_folder_url
-from lanzou.api.models import FileList, FolderList
-from lanzou.cmder import config
-from lanzou.cmder.utils import *
-from lanzou.cmder.recovery import Recovery
-from webbrowser import open_new_tab
 from sys import exit as exit_cmd
+from webbrowser import open_new_tab
+
+from lanzou.api.models import FileList, FolderList
+from lanzou.api.types import *
+from lanzou.cmder import config
+from lanzou.cmder.downloader import Downloader, Uploader
+from lanzou.cmder.manager import global_task_mgr
+from lanzou.cmder.recovery import Recovery
+from lanzou.cmder.utils import *
 
 
 class Commander:
@@ -15,6 +17,7 @@ class Commander:
     def __init__(self):
         self._prompt = '> '
         self._disk = LanZouCloud()
+        self._task_mgr = global_task_mgr
         self._dir_list = FolderList()
         self._file_list = FileList()
         self._path_list = FolderList()
@@ -38,6 +41,12 @@ class Commander:
     @staticmethod
     def update():
         check_update()
+
+    def bye(self):
+        if self._task_mgr.has_alive_task():
+            info(f"有任务在后台运行, 退出请直接关闭窗口")
+        else:
+            exit_cmd(0)
 
     def rmode(self):
         """适用于屏幕阅读器用户的显示方式"""
@@ -257,55 +266,29 @@ class Commander:
             else:
                 error(f"移动文件夹到 {choice} 失败")
 
-    def _down_by_id(self, name):
-        """通过 id 下载文件(夹)"""
-        save_path = config.save_path
-        if file := self._file_list.find_by_name(name):  # 如果是文件
-            code = self._disk.down_file_by_id(file.id, save_path, show_progress)
-            if code != LanZouCloud.SUCCESS:
-                error(f"文件下载失败: {name}, 原因: {why_error(code)}")
-        elif folder := self._dir_list.find_by_name(name):  # 如果是文件夹
-            self._disk.down_dir_by_id(folder.id, save_path, callback=show_progress, mkdir=True,
-                                      failed_callback=show_down_failed)
-        else:
-            error(f'文件(夹)不存在: {name}')
-
-    def _down_by_url(self, url):
-        """通过 url 下载"""
-        save_path = config.save_path
-        if is_file_url(url):  # 如果是文件
-            code = self._disk.down_file_by_url(url, '', save_path, show_progress)
-            if code == LanZouCloud.LACK_PASSWORD:
-                pwd = input('输入该文件的提取码 : ') or ''
-                code2 = self._disk.down_file_by_url(url, str(pwd), save_path, show_progress)
-                if code2 != LanZouCloud.SUCCESS:
-                    error(f"下载失败,原因: {why_error(code2)}")
-            elif code != LanZouCloud.SUCCESS:
-                error(f"下载失败,原因: {why_error(code)}")
-        elif is_folder_url(url):  # 如果是文件夹
-            code = self._disk.down_dir_by_url(url, '', save_path, callback=show_progress, mkdir=True,
-                                              failed_callback=show_down_failed)
-            if code == LanZouCloud.LACK_PASSWORD:
-                pwd = input('输入该文件夹的提取码 : ') or ''
-                code2 = self._disk.down_dir_by_url(url, str(pwd), save_path, callback=show_progress, mkdir=True,
-                                                   failed_callback=show_down_failed)
-                if code2 != LanZouCloud.SUCCESS:
-                    error(f"下载失败,原因: {why_error(code2)}")
-            elif code != LanZouCloud.SUCCESS:
-                error(f"下载失败,原因: {why_error(code)}")
-        else:  # 链接无效
-            error('(。>︿<) 该分享链接无效')
-
     def down(self, arg):
         """自动选择下载方式"""
-        try:
-            if arg.startswith('http'):
-                self._down_by_url(arg)
-            else:
-                self._down_by_id(arg)
-        except KeyboardInterrupt:
-            print('')
-            info('当前下载任务已取消')
+        downloader = Downloader(self._disk)
+        if arg.startswith('http'):
+            downloader.set_url(arg)
+        elif file := self._file_list.find_by_name(arg):  # 如果是文件
+            path = '/'.join(self._path_list.all_name) + '/' + arg  # 文件在网盘的绝对路径
+            downloader.set_fid(file.id, is_file=True, f_path=path)
+        elif folder := self._dir_list.find_by_name(arg):  # 如果是文件夹
+            path = '/'.join(self._path_list.all_name) + '/' + arg + '/'  # 文件夹绝对路径, 加 '/' 以便区分
+            downloader.set_fid(folder.id, is_file=False, f_path=path)
+        else:
+            error(f'文件(夹)不存在: {arg}')
+            return None
+        # 提交下载任务
+        self._task_mgr.add_task(downloader)
+
+    def jobs(self, arg):
+        """显示后台任务列表"""
+        if arg.isnumeric():
+            self._task_mgr.show_detail(int(arg))
+        else:
+            self._task_mgr.show_tasks()
 
     def upload(self, path):
         """上传文件(夹)"""
@@ -313,18 +296,13 @@ class Commander:
         if not os.path.exists(path):
             error(f'该路径不存在哦: {path}')
             return None
-
-        try:
-            if os.path.isdir(path):
-                info(f'批量上传文件: {path}')
-                self._disk.upload_dir(path, self._work_id, callback=show_progress, failed_callback=show_upload_failed)
-                self.refresh()
-            else:
-                self._disk.upload_file(path, self._work_id, callback=show_progress)
-                self.refresh()
-        except KeyboardInterrupt:
-            print('')
-            info("上传已终止")
+        uploader = Uploader(self._disk)
+        if os.path.isfile(path):
+            uploader.set_upload_path(path, is_file=True)
+        else:
+            uploader.set_upload_path(path, is_file=False)
+        uploader.set_target(self._work_id, self._work_name)
+        self._task_mgr.add_task(uploader)
 
     def share(self, name):
         """显示分享信息"""
@@ -438,8 +416,9 @@ class Commander:
     def run(self):
         """处理一条用户命令"""
         choice_list = self._file_list.all_name + self._dir_list.all_name
-        cmd_list = ['login', 'clogin', 'logout', 'ls', 'clear', 'cdrec', 'setpath', 'setsize', 'help', 'update', 'rm',
-                    'cd', 'mkdir', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc', 'refresh', 'xghost']
+        cmd_list = ['cd', 'cdrec', 'clear', 'clogin', 'desc', 'down', 'help', 'jobs', 'login', 'logout', 'ls', 'mkdir',
+                    'mv', 'passwd', 'refresh', 'rename', 'rm', 'setpath', 'setsize', 'share', 'update', 'upload',
+                    'xghost']
 
         set_completer(choice_list, cmd_list=cmd_list)
 
@@ -454,15 +433,11 @@ class Commander:
 
         cmd, arg = (args[0], '') if len(args) == 1 else (args[0], args[1])  # 命令, 参数(可带有空格, 没有参数就设为空)
 
-        no_arg_cmd = ['ls', 'login', 'clogin', 'cdrec', 'clear', 'setpath', 'setsize', 'help', 'update', 'refresh',
-                      'logout', 'rmode', 'xghost']
-        cmd_with_arg = ['rm', 'cd', 'mkdir', 'upload', 'down', 'share', 'passwd', 'rename', 'mv', 'desc']
+        no_arg_cmd = ['bye', 'cdrec', 'clear', 'clogin', 'help', 'login', 'logout', 'ls', 'refresh', 'rmode', 'setpath',
+                      'setsize', 'update', 'xghost']
+        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload']
 
         if cmd in no_arg_cmd:
             getattr(self, cmd)()
         elif cmd in cmd_with_arg:
             getattr(self, cmd)(arg)
-        elif cmd == 'bye':
-            exit_cmd(0)
-        else:
-            error('命令不存在哦，输入 help 查看帮助')
