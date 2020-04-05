@@ -141,18 +141,20 @@ class Commander:
         """列出文件(夹)"""
         if self._reader_mode:  # 方便屏幕阅读器阅读
             for folder in self._dir_list:
-                print(f"{folder.name}/  {folder.desc}")
+                pwd_str = '有提取码' if folder.has_pwd else ''
+                print(f"{folder.name}/  {folder.desc}  {pwd_str}")
             for file in self._file_list:
-                print(f"{file.name}  大小:{file.size}  上传时间:{file.time}")
+                pwd_str = '有提取码' if file.has_pwd else ''
+                print(f"{file.name}  大小:{file.size}  上传时间:{file.time}  下载次数:{file.downs}  {pwd_str}")
         else:  # 普通用户显示方式
             for folder in self._dir_list:
                 pwd_str = '✦' if folder.has_pwd else '✧'
                 print("#{0:<12}{1:<4}{2}{3}/".format(
-                    folder.id, pwd_str, text_align(folder.desc, 24), folder.name))
+                    folder.id, pwd_str, text_align(folder.desc, 28), folder.name))
             for file in self._file_list:
                 pwd_str = '✦' if file.has_pwd else '✧'
-                print("#{0:<12}{1:<4}{2:<14}{3:<10}{4}".format(
-                    file.id, pwd_str, file.time, file.size, file.name))
+                print("#{0:<12}{1:<4}{2:<12}{3:>8}{4:>6}  {5}".format(
+                    file.id, pwd_str, file.time, file.size, file.downs, file.name))
 
     def cd(self, dir_name):
         """切换工作目录"""
