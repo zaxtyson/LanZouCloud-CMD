@@ -12,7 +12,7 @@
 
 # 界面
 
-![cmd.png](https://upload.cc/i1/2020/04/03/TGkgNI.png)
+![cmd.png](https://upload.cc/i1/2020/04/04/W8GKsr.png)
 
 # 说明
 - 请使用 Python 3.8+ 运行
