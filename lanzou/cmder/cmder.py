@@ -27,7 +27,9 @@ class Commander:
         self._work_id = -1
         self._last_work_id = -1
         self._reader_mode = config.reader_mode
+        self._default_dir_pwd = config.default_dir_pwd
         self._disk.set_max_size(config.max_size)
+        self._disk.set_upload_delay(config.upload_delay)
         self._disk.set_captcha_handler(captcha_handler)
 
     @staticmethod
@@ -173,17 +175,19 @@ class Commander:
         else:
             error(f'文件夹不存在: {dir_name}')
 
-    def mkdir(self, name, desc=''):
+    def mkdir(self, name):
         """创建文件夹"""
         if self._dir_list.find_by_name(name):
             error(f'文件夹已存在: {name}')
             return None
 
-        dir_id = self._disk.mkdir(self._work_id, name, desc)
+        dir_id = self._disk.mkdir(self._work_id, name, '')
         if dir_id == LanZouCloud.MKDIR_ERROR:
             error(f'创建文件夹失败(深度最大 4 级)')
-        else:  # 创建成功，添加到文件夹列表，减少向服务器请求次数
-            self._dir_list.append(Folder(name, dir_id, False, desc))
+            return None
+        # 创建成功，添加到文件夹列表，减少向服务器请求次数
+        self._disk.set_passwd(dir_id, self._default_dir_pwd, is_file=False)
+        self._dir_list.append(Folder(name, dir_id, bool(self._default_dir_pwd), ''))
 
     def rm(self, name):
         """删除文件(夹)"""
@@ -415,13 +419,38 @@ class Commander:
             return None
         config.max_size = int(max_size)
 
+    def setdelay(self):
+        """设置大文件上传延时"""
+        print("大文件数据块上传延时范围(秒), 如: 0 60")
+        print(f"当前配置: {config.upload_delay}")
+        tr = input("请输入延时范围: ").split()
+        if len(tr) != 2:
+            error("格式有误!")
+            return None
+        tr = (int(tr[0]), int(tr[1]))
+        self._disk.set_upload_delay(tr)
+        config.upload_delay = tr
+
+    def setpasswd(self):
+        """设置文件(夹)默认上传密码"""
+        print("关闭提取码请输入 off")
+        print(f"当前配置: 文件: {config.default_file_pwd or '无'}, 文件夹: {config.default_dir_pwd or '无'}")
+        file_pwd = input("设置文件默认提取码(2-6位): ")
+        if 2 <= len(file_pwd) <= 6:
+            config.default_file_pwd = '' if file_pwd == 'off' else file_pwd
+        dir_pwd = input("设置文件夹默认提取码(2-12位): ")
+        if 2 <= len(dir_pwd) <= 12:
+            config.default_dir_pwd = '' if dir_pwd == 'off' else dir_pwd
+        info(f"修改成功: 文件: {config.default_file_pwd or '无'}, 文件夹: {config.default_dir_pwd or '无'}, 配置将在下次启动时生效")
+
     def run(self):
         """处理一条用户命令"""
-        choice_list = self._file_list.all_name + self._dir_list.all_name
-        cmd_list = ['cd', 'cdrec', 'clear', 'clogin', 'desc', 'down', 'help', 'jobs', 'login', 'logout', 'ls', 'mkdir',
-                    'mv', 'passwd', 'refresh', 'rename', 'rm', 'setpath', 'setsize', 'share', 'update', 'upload',
-                    'xghost']
+        no_arg_cmd = ['bye', 'cdrec', 'clear', 'clogin', 'help', 'login', 'logout', 'ls', 'refresh', 'rmode', 'setpath',
+                      'setsize', 'update', 'xghost', 'setdelay', 'setpasswd']
+        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload']
 
+        choice_list = self._file_list.all_name + self._dir_list.all_name
+        cmd_list = no_arg_cmd + cmd_with_arg
         set_completer(choice_list, cmd_list=cmd_list)
 
         try:
@@ -434,10 +463,6 @@ class Commander:
             return None
 
         cmd, arg = (args[0], '') if len(args) == 1 else (args[0], args[1])  # 命令, 参数(可带有空格, 没有参数就设为空)
-
-        no_arg_cmd = ['bye', 'cdrec', 'clear', 'clogin', 'help', 'login', 'logout', 'ls', 'refresh', 'rmode', 'setpath',
-                      'setsize', 'update', 'xghost']
-        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload']
 
         if cmd in no_arg_cmd:
             getattr(self, cmd)()

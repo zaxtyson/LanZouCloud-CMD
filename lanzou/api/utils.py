@@ -75,8 +75,8 @@ def is_name_valid(filename: str) -> bool:
 
 def is_file_url(share_url: str) -> bool:
     """判断是否为文件的分享链接"""
-    base_pat = 'https?://www.lanzous.com/.+'
-    user_pat = 'https?://www.lanzous.com/i[a-z0-9]{5,}/?'  # 普通用户 URL 规则
+    base_pat = r'https?://.+?\.lanzous.com/.+'
+    user_pat = r'https?://.+?\.lanzous.com/i[a-z0-9]{5,}/?'  # 普通用户 URL 规则
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):
@@ -92,8 +92,8 @@ def is_file_url(share_url: str) -> bool:
 
 def is_folder_url(share_url: str) -> bool:
     """判断是否为文件夹的分享链接"""
-    base_pat = 'https?://www.lanzous.com/.+'
-    user_pat = 'https?://www.lanzous.com/b[a-z0-9]{7,}/?'
+    base_pat = r'https?://.+?\.lanzous.com/.+'
+    user_pat = r'https?://.+?\.lanzous.com/b[a-z0-9]{7,}/?'
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):
@@ -114,7 +114,7 @@ def un_serialize(data: bytes):
         if not isinstance(ret, dict):
             return None
         return ret
-    except (TypeError, pickle.UnpicklingError):
+    except Exception:  # 这里可能会丢奇怪的异常
         return None
 
 

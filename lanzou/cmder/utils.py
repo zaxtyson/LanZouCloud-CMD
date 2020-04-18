@@ -136,6 +136,9 @@ def print_help():
     cd          切换工作目录
     cdrec       进入回收站
     rm          删除网盘文件(夹)
+    rename      重命名文件(夹)
+    desc        修改文件(夹)描述
+    mv          移动文件(夹)
     mkdir       创建新文件夹(最大深度 4)
     share       显示文件(夹)分享信息
     clear       清空屏幕
@@ -145,9 +148,8 @@ def print_help():
     passwd      设置文件(夹)提取码
     setpath     设置文件下载路径
     setsize     设置单文件大小限制
-    rename      重命名文件(夹)
-    desc        修改文件(夹)描述
-    mv          移动文件(夹)
+    setpasswd   设置文件(夹)默认提取码
+    setdelay    设置上传大文件数据块的延时
     bye         退出本程序
     
     更详细的介绍请参考本项目的 Github 主页:

@@ -153,6 +153,8 @@ class Uploader(Thread):
         self._now_size = 0
         self._total_size = 1
         self._err_msg = []
+        self._default_file_pwd = config.default_file_pwd
+        self._default_dir_pwd = config.default_dir_pwd
 
     def _error_msg(self, msg):
         self._err_msg.append(msg)
@@ -193,14 +195,22 @@ class Uploader(Thread):
         """文件下载失败时的回调函数"""
         self._error_msg(f"上传失败: {why_error(code)} -> {filename}")
 
+    def _set_pwd(self, fid, is_file):
+        """上传完成自动设置提取码"""
+        if is_file:
+            self._disk.set_passwd(fid, self._default_file_pwd, is_file=True)
+        else:
+            self._disk.set_passwd(fid, self._default_dir_pwd, is_file=False)
+
     def run(self) -> None:
         if self._up_type == UploadType.FILE:
-            code = self._disk.upload_file(self._up_path, self._folder_id, callback=self._show_progress)
+            code = self._disk.upload_file(self._up_path, self._folder_id, callback=self._show_progress,
+                                          uploaded_handler=self._set_pwd)
             if code != LanZouCloud.SUCCESS:
                 self._error_msg(f"文件上传失败: {why_error(code)} -> {self._up_path}")
 
         elif self._up_type == UploadType.FOLDER:
             code = self._disk.upload_dir(self._up_path, self._folder_id, callback=self._show_progress,
-                                         failed_callback=self._show_upload_failed)
+                                         failed_callback=self._show_upload_failed, uploaded_handler=self._set_pwd)
             if code != LanZouCloud.SUCCESS:
                 self._error_msg(f"文件夹上传失败: {why_error(code)} -> {self._up_path}")

@@ -35,6 +35,33 @@ class Config:
         self._save()
 
     @property
+    def upload_delay(self):
+        return self._config.get('upload_delay')
+
+    @upload_delay.setter
+    def upload_delay(self, value):
+        self._config['upload_delay'] = value
+        self._save()
+
+    @property
+    def default_file_pwd(self):
+        return self._config.get('default_file_pwd')
+
+    @default_file_pwd.setter
+    def default_file_pwd(self, value):
+        self._config['default_file_pwd'] = value
+        self._save()
+
+    @property
+    def default_dir_pwd(self):
+        return self._config.get('default_dir_pwd')
+
+    @default_dir_pwd.setter
+    def default_dir_pwd(self, value):
+        self._config['default_dir_pwd'] = value
+        self._save()
+
+    @property
     def max_size(self):
         return self._config.get('max_size')
 
