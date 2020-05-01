@@ -16,9 +16,8 @@
 
 # 说明
 - 请使用 Python 3.8+ 运行
-- 解除官方上传限制，支持批量上传下载
+- ~~解除官方上传限制~~，支持批量上传下载
 - 为了方便管理，API 独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
-- 如果 Windows 平台缺少 `readline`，请执行 `pip install pyreadline`
 - 默认下载路径为 `./Download`，请使用 `setpath` 命令修改
 - 默认分卷大小为 100 MB, 会员用户请使用 `setsize` 命令修改
 - 未登录时可使用 `down URL` 的方式下载文件(夹)~
