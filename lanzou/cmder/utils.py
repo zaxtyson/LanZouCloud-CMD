@@ -1,6 +1,5 @@
 import os
 from platform import system as platform
-
 import readline
 import requests
 
@@ -126,7 +125,7 @@ def print_help():
     help        显示本信息
     update      检查更新
     rmode       屏幕阅读器模式
-    refresh     强制刷新文件列表
+    refresh     刷新当前目录
     xghost      清理"幽灵"文件夹
     login      使用 Cookie 登录网盘
     logout      注销当前账号
@@ -140,6 +139,7 @@ def print_help():
     mv          移动文件(夹)
     mkdir       创建新文件夹(最大深度 4)
     share       显示文件(夹)分享信息
+    export      导出文件夹下的文件信息到文件
     clear       清空屏幕
     clean       清空回收站
     upload      上传文件(夹)
@@ -191,3 +191,5 @@ def check_update():
         print("如有 Bug 或建议,请提 Issue 或发邮件反馈")
         print("Email: zaxtyson@foxmail.com")
         print("Github: https://github.com/zaxtyson/LanZouCloud-CMD")
+
+

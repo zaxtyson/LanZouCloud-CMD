@@ -1,7 +1,7 @@
-from getpass import getpass
 from sys import exit as exit_cmd
 from webbrowser import open_new_tab
-
+from time import strftime, localtime
+import csv
 from lanzou.api.models import FileList, FolderList
 from lanzou.api.types import *
 from lanzou.cmder import config
@@ -17,6 +17,7 @@ class Commander:
     def __init__(self):
         self._prompt = '> '
         self._disk = LanZouCloud()
+        # self._disk.ignore_limits()
         self._task_mgr = global_task_mgr
         self._dir_list = FolderList()
         self._file_list = FileList()
@@ -272,6 +273,7 @@ class Commander:
             error(f'文件(夹)不存在: {arg}')
             return None
         # 提交下载任务
+        info("下载任务已提交, 使用 jobs 命令查看进度")
         self._task_mgr.add_task(downloader)
 
     def jobs(self, arg):
@@ -293,6 +295,7 @@ class Commander:
         else:
             uploader.set_upload_path(path, is_file=False)
         uploader.set_target(self._work_id, self._work_name)
+        info("上传任务已提交, 使用 jobs 命令查看进度")
         self._task_mgr.add_task(uploader)
 
     def share(self, name):
@@ -314,22 +317,17 @@ class Commander:
             print("-" * 50)
 
         elif folder := self._dir_list.find_by_name(name):  # 文件夹
-            inf = self._disk.get_folder_info_by_id(folder.id)
+            inf = self._disk.get_share_info(folder.id, is_file=False)
             if inf.code != LanZouCloud.SUCCESS:
                 print('ERROR : 获取文件夹信息出错')
                 return None
 
-            print("-" * 80)
+            print("-" * 50)
             print(f"文件夹名 : {name}")
-            print(f"提取码   : {inf.folder.pwd or '无'}")
-            print(f"分享链接 : {inf.folder.url}")
-            print(f"描述信息 : {inf.folder.desc or '无'}")
-            print("-" * 80)
-
-            for file in inf.files:
-                print("+ {0:<12}{1:<9}{2}\t{3}".format(file.time, file.size, file.url, file.name))
-            if len(inf.files) != 0:
-                print("-" * 80)
+            print(f"提取码   : {inf.pwd or '无'}")
+            print(f"分享链接 : {inf.url}")
+            print(f"描述信息 : {inf.desc or '无'}")
+            print("-" * 50)
         else:
             error(f"文件(夹)不存在: {name}")
 
@@ -383,6 +381,21 @@ class Commander:
         else:
             error(f'文件(夹)不存在: {name}')
 
+    def export(self, name):
+        """文件链接信息导出到文件"""
+        if folder := self._dir_list.find_by_name(name):
+            csv_path = config.save_path + os.sep + strftime("%Y-%m-%d_%H-%M-%S", localtime()) + '.csv'
+            print(f"正在导出 {name} 下的文件信息, 请稍等...")
+            folder_info = self._disk.get_folder_info_by_id(folder.id)
+            with open(csv_path, 'w', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                for file in folder_info.files:
+                    writer.writerow([file.name, file.time, file.size, file.url])
+
+            info(f"信息已导出至文件: {csv_path}")
+        else:
+            error(f'文件夹不存在: {name}')
+
     def setpath(self):
         """设置下载路径"""
         print(f"当前下载路径 : {config.save_path}")
@@ -432,7 +445,7 @@ class Commander:
         """处理一条用户命令"""
         no_arg_cmd = ['bye', 'cdrec', 'clear', 'help', 'login', 'logout', 'ls', 'refresh', 'rmode', 'setpath',
                       'setsize', 'update', 'xghost', 'setdelay', 'setpasswd']
-        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload']
+        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload', 'export']
 
         choice_list = self._file_list.all_name + self._dir_list.all_name
         cmd_list = no_arg_cmd + cmd_with_arg

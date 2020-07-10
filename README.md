@@ -15,12 +15,9 @@
 ![cmd.png](https://upload.cc/i1/2020/04/04/W8GKsr.png)
 
 # 说明
-- 请使用 Python 3.8+ 运行
-- ~~解除官方上传限制~~，支持批量上传下载
+- 请使用 Python 3.8+ 运行，否则会报语法错误
 - 为了方便管理，API 独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
-- 默认下载路径为 `./Download`，请使用 `setpath` 命令修改
-- 默认分卷大小为 100 MB, 会员用户请使用 `setsize` 命令修改
-- 未登录时可使用 `down URL` 的方式下载文件(夹)~
+- 由于某些原因不再支持突破官方限制，如果您需要上传大文件，请 fork 本项目并修改部分代码(见API文档)
 - 关注本页面以获取更新，如果有问题或者建议，请提 issue
 - 如果喜欢本项目，请给一个 star (^▽^)/
 - 详细介绍请移步 [Wiki](https://github.com/zaxtyson/LanZouCloud-CMD/wiki) 页面
@@ -32,7 +29,49 @@
 
 - 或者在本项目的 [`releases`](https://github.com/zaxtyson/LanZouCloud-CMD/releases) 板块下载
 
+# 命令速览
+> 路径和文件名支持 TAB 补全
+
+|命令                                 |描述                    |
+|-------------------------------------|-----------------------|
+|help                                 |查看帮助文档             |
+|update                               |检测更新               |
+|login                                |使用 Cookie 登录[[1]](https://github.com/zaxtyson/LanZouCloud-API/issues/21#issuecomment-632964409) [[2]](https://github.com/zaxtyson/LanZouCloud-CMD#v235-%E6%9B%B4%E6%96%B0%E8%AF%B4%E6%98%8E)       |
+|logout                               |注销当前账号               |
+|refresh                              |刷新当前目录            |
+|clear                                |清空屏幕                |
+|ls                                   |列出文件与目录          |
+|mkdir `文件夹`                       |创建文件夹(路径最大深度 4 级)               |
+|rm `文件(夹)名`                      |将文件(夹)放入回收站            |
+|cd `路径`                           |切换工作目录(..表示上级路径, -表示上一次路径)
+|mv `文件(夹)名`                       |移动文件(夹)                |
+|rename `文件(夹)名`                   |重命名(普通用户无法修改文件名)    |
+|desc `文件(夹)名`                     |设置文件(夹)描述信息       |
+|passwd `文件(夹)名`                    |设置文件(夹)提取码       |
+|setpath                              |修改下载路径(默认 ./Download) |
+|setsize                              |修改单文件大小限制        |
+|setpasswd                              |设置文件(夹)默认提取码|
+|setdelay                              |设置数据块上传延时，防止被封号(突破官方限制时使用)|
+|upload `文件(夹)路径`                |上传文件(夹)            |
+|down `文件(夹)名/分享链接`              |下载文件(夹)  |
+|share `文件/文件夹`                    |查看文件(夹)分享信息    |
+|export `文件夹名`                      |导出文件夹下的文件信息到CSV文件|
+|xghost                                |清理"幽灵"文件夹(网盘中看不见,移动时会显示)|
+|jobs                                  |查看后台上传/下载任务      |
+|jobs `任务ID`                          |查看任务详细信息(错误原因)      |
+|cdrec                                |进入回收站              |
+|[cdrec]  ls                          |显示回收站文件           |
+|[cdrec]  rec `文件(夹)名`             |恢复文件(夹)           |
+|[cdrec]  clean                       |清空回收站              |
+|[cdrec]  cd ..                       |退出回收站              |
+|bye                                  |退出程序                    |
+
 # 更新日志
+## `v2.5.2`
+- 修复子域名变化导致的异常
+- `share` 命令不再显示文件夹下的文件信息
+- 新增 `export` 命令, 支持批量导出文件夹内的文件信息(csv文件)
+
 ## `v2.5.0`
 - 遵守官方限制, 不再支持大文件上传和文件名伪装功能(之前上传的文件仍可以正常下载)
 - 登录接口被限制, 使用 Cookie 登录, 参见 `v2.3.5` 更新日志
