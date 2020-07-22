@@ -387,7 +387,7 @@ class Commander:
             csv_path = config.save_path + os.sep + strftime("%Y-%m-%d_%H-%M-%S", localtime()) + '.csv'
             print(f"正在导出 {name} 下的文件信息, 请稍等...")
             folder_info = self._disk.get_folder_info_by_id(folder.id)
-            with open(csv_path, 'w', newline='') as csv_file:
+            with open(csv_path, 'w', newline='', encoding='utf-8') as csv_file:
                 writer = csv.writer(csv_file)
                 for file in folder_info.files:
                     writer.writerow([file.name, file.time, file.size, file.url])
