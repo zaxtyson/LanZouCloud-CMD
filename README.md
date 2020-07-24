@@ -16,6 +16,7 @@
 
 # 说明
 - 请使用 Python 3.8+ 运行，否则会报语法错误
+- 安装依赖 `pip install requests requests-toolbelt`, Windows 平台还需要 `pyreadline` [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14#issuecomment-590166417)
 - 为了方便管理，API 独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 由于某些原因不再支持突破官方限制，如果您需要上传大文件，请 fork 本项目并修改部分代码(见API文档)
 - 关注本页面以获取更新，如果有问题或者建议，请提 issue
@@ -68,6 +69,10 @@
 |bye                                  |退出程序                    |
 
 # 更新日志
+## `v2.5.4`
+- 修复下载某些文件时验证方式变化的问题
+- 修复 export 导出时的编码问题(Excel乱码: 数据->从文本/CSV导入->UTF-8编码)
+
 ## `v2.5.3`
 - 修复新出现的 URL 包含大写字符无法匹配的问题
 

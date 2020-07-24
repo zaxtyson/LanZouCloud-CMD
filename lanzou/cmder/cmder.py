@@ -31,7 +31,6 @@ class Commander:
         self._default_dir_pwd = config.default_dir_pwd
         self._disk.set_max_size(config.max_size)
         self._disk.set_upload_delay(config.upload_delay)
-        self._disk.set_captcha_handler(captcha_handler)
 
     @staticmethod
     def clear():
@@ -384,6 +383,8 @@ class Commander:
     def export(self, name):
         """文件链接信息导出到文件"""
         if folder := self._dir_list.find_by_name(name):
+            if not os.path.exists(config.save_path):
+                os.makedirs(config.save_path)
             csv_path = config.save_path + os.sep + strftime("%Y-%m-%d_%H-%M-%S", localtime()) + '.csv'
             print(f"正在导出 {name} 下的文件信息, 请稍等...")
             folder_info = self._disk.get_folder_info_by_id(folder.id)

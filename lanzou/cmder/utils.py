@@ -49,25 +49,8 @@ def set_console_style():
     """设置命令行窗口样式"""
     if os.name != 'nt':
         return None
-    os.system('mode 120, 40')
+    # os.system('mode 120, 40')
     os.system(f'title 蓝奏云 CMD 控制台 {version}')
-
-
-def captcha_handler(img_data):
-    """处理下载时出现的验证码"""
-    img_path = os.getcwd() + os.sep + 'captcha.png'
-    with open(img_path, 'wb') as f:
-        f.write(img_data)
-    m_platform = platform()
-    if m_platform == 'Darwin':
-        os.system(f'open {img_path}')
-    elif m_platform == 'Linux':
-        os.system(f'xdg-open {img_path}')
-    else:
-        os.startfile(img_path)
-    ans = input('\n请输入验证码:')
-    os.remove(img_path)
-    return ans
 
 
 def text_align(text, length) -> str:
