@@ -99,10 +99,10 @@ class Downloader(Thread):
             self._error_msg('(。>︿<) 该分享链接无效')
 
         elif self._down_type == DownType.FILE_URL:
-            code = self._disk.down_file_by_url(self._down_args, '', self._save_path, self._show_progress)
+            code = self._disk.down_file_by_url(self._down_args, '', self._save_path, callback=self._show_progress)
             if code == LanZouCloud.LACK_PASSWORD:
                 pwd = input('输入该文件的提取码 : ') or ''
-                code2 = self._disk.down_file_by_url(self._down_args, str(pwd), self._save_path, self._show_progress)
+                code2 = self._disk.down_file_by_url(self._down_args, str(pwd), self._save_path, callback=self._show_progress)
                 if code2 != LanZouCloud.SUCCESS:
                     self._error_msg(f"文件下载失败: {why_error(code2)} -> {self._down_args}")
             elif code != LanZouCloud.SUCCESS:
@@ -122,7 +122,7 @@ class Downloader(Thread):
                 self._error_msg(f"文件夹下载失败: {why_error(code)} -> {self._down_args}")
 
         elif self._down_type == DownType.FILE_ID:
-            code = self._disk.down_file_by_id(self._down_args, self._save_path, self._show_progress)
+            code = self._disk.down_file_by_id(self._down_args, self._save_path, callback=self._show_progress)
             if code != LanZouCloud.SUCCESS:
                 self._error_msg(f"文件下载失败: {why_error(code)} -> {self._f_path}")
 
