@@ -1,10 +1,10 @@
 import os
-from platform import system as platform
+
 import readline
 import requests
 
 from lanzou.api import LanZouCloud
-from lanzou.cmder import version
+from lanzou.cmder import version, config
 
 
 def error(msg):
@@ -110,9 +110,10 @@ def print_help():
     rmode       屏幕阅读器模式
     refresh     刷新当前目录
     xghost      清理"幽灵"文件夹
-    login      使用 Cookie 登录网盘
+    login       使用 Cookie 登录网盘
     logout      注销当前账号
     jobs        查看后台任务列表   
+    jobs <ID>   查看 ID 对应任务的详情(失败原因)
     ls          列出文件(夹)
     cd          切换工作目录
     cdrec       进入回收站
@@ -125,8 +126,8 @@ def print_help():
     export      导出文件夹下的文件信息到文件
     clear       清空屏幕
     clean       清空回收站
-    upload      上传文件(夹)
-    down        下载文件(夹)，支持 URL 下载
+    upload      上传文件(夹), 大文件上传功能已关闭
+    down        下载文件(夹), 支持 URL, 支持递归下载
     passwd      设置文件(夹)提取码
     setpath     设置文件下载路径
     setsize     设置单文件大小限制
@@ -176,3 +177,9 @@ def check_update():
         print("Github: https://github.com/zaxtyson/LanZouCloud-CMD")
 
 
+def show_tips_first():
+    """第一次启动时的提醒"""
+    if not config.cookie:
+        info(f"当前下载文件保存路径为: {config.save_path}")
+        info("使用 setpath 命令可修改保存路径")
+        info("其它帮助信息请使用 help 命令查看\n")

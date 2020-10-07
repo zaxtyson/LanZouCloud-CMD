@@ -110,11 +110,11 @@ class Downloader(Thread):
 
         elif self._down_type == DownType.FOLDER_URL:
             code = self._disk.down_dir_by_url(self._down_args, '', self._save_path, callback=self._show_progress,
-                                              mkdir=True, failed_callback=self._show_down_failed)
+                                              recursive=True, mkdir=True, failed_callback=self._show_down_failed)
             if code == LanZouCloud.LACK_PASSWORD:
                 pwd = input('输入该文件夹的提取码 : ') or ''
                 code2 = self._disk.down_dir_by_url(self._down_args, str(pwd), self._save_path,
-                                                   callback=self._show_progress,
+                                                   callback=self._show_progress, recursive=True,
                                                    mkdir=True, failed_callback=self._show_down_failed)
                 if code2 != LanZouCloud.SUCCESS:
                     self._error_msg(f"文件夹下载失败: {why_error(code2)} -> {self._down_args}")
@@ -128,7 +128,7 @@ class Downloader(Thread):
 
         elif self._down_type == DownType.FOLDER_ID:
             code = self._disk.down_dir_by_id(self._down_args, self._save_path, callback=self._show_progress,
-                                             mkdir=True, failed_callback=self._show_down_failed)
+                                             mkdir=True, failed_callback=self._show_down_failed, recursive=True)
             if code != LanZouCloud.SUCCESS:
                 self._error_msg(f"文件夹下载失败: {why_error(code)} -> {self._f_path} ")
 

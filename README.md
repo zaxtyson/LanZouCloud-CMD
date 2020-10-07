@@ -49,7 +49,7 @@
 |rename `文件(夹)名`                   |重命名(普通用户无法修改文件名)    |
 |desc `文件(夹)名`                     |设置文件(夹)描述信息       |
 |passwd `文件(夹)名`                    |设置文件(夹)提取码       |
-|setpath                              |修改下载路径(默认 ./Download) |
+|setpath                              |修改下载路径(默认 D:\Download) |
 |setsize                              |修改单文件大小限制        |
 |setpasswd                              |设置文件(夹)默认提取码|
 |setdelay                              |设置数据块上传延时，防止被封号(突破官方限制时使用)|
@@ -69,6 +69,11 @@
 |bye                                  |退出程序                    |
 
 # 更新日志
+## `v2.5.7`
+- 修复 VIP 用户分享的递归文件夹无法下载的问题[#49](https://github.com/zaxtyson/LanZouCloud-CMD/issues/49)
+- 修复用户描述中带字符串`请输入密码`而文件没有设置提取码导致误判的问题
+- 下载文件夹时会递归下载并自动创建对应文件夹
+
 ## `v2.5.5`
 - 修复下载两个同名文件时断点续传功能异常的问题[#35](https://github.com/zaxtyson/LanZouCloud-API/issues/35#issue-668534695)
 - 下载同名文件时自动添加序号以便区分

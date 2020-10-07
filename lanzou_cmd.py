@@ -5,6 +5,7 @@ if __name__ == '__main__':
     set_console_style()
     check_update()
     print_logo()
+    show_tips_first()
     commander = Commander()
     commander.login()
 
