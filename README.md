@@ -69,12 +69,19 @@
 |bye                                  |退出程序                    |
 
 # 更新日志
+
+- 修复无法上传文件的问题 [#52](https://github.com/zaxtyson/LanZouCloud-API/pull/52)
+- 新增 11 种允许上传的文件格式[#90](https://github.com/rachpt/lanzou-gui/issues/90)
+- 修复会员自定义文件夹 URL 识别错误的问题[#84](https://github.com/rachpt/lanzou-gui/issues/84)
+
 ## `v2.5.7`
+
 - 修复 VIP 用户分享的递归文件夹无法下载的问题[#49](https://github.com/zaxtyson/LanZouCloud-CMD/issues/49)
 - 修复用户描述中带字符串`请输入密码`而文件没有设置提取码导致误判的问题
 - 下载文件夹时会递归下载并自动创建对应文件夹
 
 ## `v2.5.5`
+
 - 修复下载两个同名文件时断点续传功能异常的问题[#35](https://github.com/zaxtyson/LanZouCloud-API/issues/35#issue-668534695)
 - 下载同名文件时自动添加序号以便区分
 - 修复蓝奏云将文件名敏感词(如[小姐](https://zaxtyson.lanzous.com/ic59zpg))替换为`*`导致下载文件崩溃的问题

@@ -1,5 +1,4 @@
 from lanzou.cmder.utils import *
-from lanzou.cmder import config
 
 
 class Recovery:

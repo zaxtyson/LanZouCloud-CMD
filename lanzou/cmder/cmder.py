@@ -1,10 +1,10 @@
-from sys import exit as exit_cmd
-from webbrowser import open_new_tab
-from time import strftime, localtime
 import csv
+from sys import exit as exit_cmd
+from time import strftime, localtime
+from webbrowser import open_new_tab
+
 from lanzou.api.models import FileList, FolderList
 from lanzou.api.types import *
-from lanzou.cmder import config
 from lanzou.cmder.downloader import Downloader, Uploader
 from lanzou.cmder.manager import global_task_mgr
 from lanzou.cmder.recovery import Recovery
@@ -446,7 +446,8 @@ class Commander:
         """处理一条用户命令"""
         no_arg_cmd = ['bye', 'cdrec', 'clear', 'help', 'login', 'logout', 'ls', 'refresh', 'rmode', 'setpath',
                       'setsize', 'update', 'xghost', 'setdelay', 'setpasswd']
-        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload', 'export']
+        cmd_with_arg = ['cd', 'desc', 'down', 'jobs', 'mkdir', 'mv', 'passwd', 'rename', 'rm', 'share', 'upload',
+                        'export']
 
         choice_list = self._file_list.all_name + self._dir_list.all_name
         cmd_list = no_arg_cmd + cmd_with_arg

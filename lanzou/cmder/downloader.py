@@ -102,7 +102,8 @@ class Downloader(Thread):
             code = self._disk.down_file_by_url(self._down_args, '', self._save_path, callback=self._show_progress)
             if code == LanZouCloud.LACK_PASSWORD:
                 pwd = input('输入该文件的提取码 : ') or ''
-                code2 = self._disk.down_file_by_url(self._down_args, str(pwd), self._save_path, callback=self._show_progress)
+                code2 = self._disk.down_file_by_url(self._down_args, str(pwd), self._save_path,
+                                                    callback=self._show_progress)
                 if code2 != LanZouCloud.SUCCESS:
                     self._error_msg(f"文件下载失败: {why_error(code2)} -> {self._down_args}")
             elif code != LanZouCloud.SUCCESS:
