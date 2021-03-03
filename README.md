@@ -68,6 +68,30 @@
 |[cdrec]  cd ..                       |退出回收站              |
 |bye                                  |退出程序                    |
 
+# Windows Terminal
+
+如果觉得 Windows 的 CMD 太丑, 可以把蓝奏云控制台加入新版
+[Terminal](https://docs.microsoft.com/zh-cn/windows/terminal/) 的选项卡中
+
+修改 Terminal 的 `settings.json`
+
+在 `profiles` > `list` 下新增一项
+
+```
+{
+    // 文件位置请修改为实际安装路径
+    "guid": "{27d10ed2-13d0-420d-a602-39d1386872d0}",
+    "name": "蓝奏云 CMD",
+    "icon": "D:\\Program Files\\蓝奏云 CMD\\logo.ico",
+    "commandline": "D:\\Program Files\\蓝奏云 CMD\\lanzou-cmd.exe",
+    "startingDirectory": "D:\\Program Files\\蓝奏云 CMD",
+    "hidden": false,
+    "suppressApplicationTitle": false
+}
+```
+
+![](https://upload.cc/i1/2021/03/03/8f2bVk.png)
+
 # 更新日志
 
 - 修复无法上传文件的问题 [#52](https://github.com/zaxtyson/LanZouCloud-API/pull/52)
