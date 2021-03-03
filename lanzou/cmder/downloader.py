@@ -156,6 +156,7 @@ class Uploader(Thread):
         self._err_msg = []
         self._default_file_pwd = config.default_file_pwd
         self._default_dir_pwd = config.default_dir_pwd
+        self._uploaded_handler = None
 
     def _error_msg(self, msg):
         self._err_msg.append(msg)
@@ -183,6 +184,11 @@ class Uploader(Thread):
         self._up_path = path
         self._up_type = UploadType.FILE if is_file else UploadType.FOLDER
 
+    def set_uploaded_handler(self, handler):
+        """设置上传完成后的回调函数"""
+        if handler is not None:
+            self._uploaded_handler = handler
+
     def set_target(self, folder_id=-1, folder_name=''):
         """设置网盘保存文件夹信息"""
         self._folder_id = folder_id
@@ -196,22 +202,26 @@ class Uploader(Thread):
         """文件下载失败时的回调函数"""
         self._error_msg(f"上传失败: {why_error(code)} -> {filename}")
 
-    def _set_pwd(self, fid, is_file):
-        """上传完成自动设置提取码"""
+    def _after_uploaded(self, fid, is_file):
+        """上传完成自动设置提取码, 如果有其它回调函数就调用"""
         if is_file:
             self._disk.set_passwd(fid, self._default_file_pwd, is_file=True)
         else:
             self._disk.set_passwd(fid, self._default_dir_pwd, is_file=False)
 
+        if self._uploaded_handler is not None:
+            self._uploaded_handler(fid, is_file)
+
     def run(self) -> None:
         if self._up_type == UploadType.FILE:
             code = self._disk.upload_file(self._up_path, self._folder_id, callback=self._show_progress,
-                                          uploaded_handler=self._set_pwd)
+                                          uploaded_handler=self._after_uploaded)
             if code != LanZouCloud.SUCCESS:
                 self._error_msg(f"文件上传失败: {why_error(code)} -> {self._up_path}")
 
         elif self._up_type == UploadType.FOLDER:
             code = self._disk.upload_dir(self._up_path, self._folder_id, callback=self._show_progress,
-                                         failed_callback=self._show_upload_failed, uploaded_handler=self._set_pwd)
+                                         failed_callback=self._show_upload_failed,
+                                         uploaded_handler=self._uploaded_handler)
             if code != LanZouCloud.SUCCESS:
                 self._error_msg(f"文件夹上传失败: {why_error(code)} -> {self._up_path}")

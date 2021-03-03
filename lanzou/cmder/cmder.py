@@ -135,12 +135,12 @@ class Commander:
                 print(f"{file.name}  大小:{file.size}  上传时间:{file.time}  下载次数:{file.downs}  {pwd_str}")
         else:  # 普通用户显示方式
             for folder in self._dir_list:
-                pwd_str = '✦' if folder.has_pwd else '✧'
-                print("#{0:<12}{1:<4}{2}{3}/".format(
+                pwd_str = '◆' if folder.has_pwd else '◇'
+                print("#{0:<12}{1:<2}{2}{3}/".format(
                     folder.id, pwd_str, text_align(folder.desc, 28), folder.name))
             for file in self._file_list:
-                pwd_str = '✦' if file.has_pwd else '✧'
-                print("#{0:<12}{1:<4}{2:<12}{3:>8}{4:>6}  {5}".format(
+                pwd_str = '◆' if file.has_pwd else '◇'
+                print("#{0:<12}{1:<2}{2:<12}{3:>8}{4:>6}↓  {5}".format(
                     file.id, pwd_str, file.time, file.size, file.downs, file.name))
 
     def cd(self, dir_name):
@@ -272,7 +272,7 @@ class Commander:
             error(f'文件(夹)不存在: {arg}')
             return None
         # 提交下载任务
-        info("下载任务已提交, 使用 jobs 命令查看进度")
+        info("下载任务已提交, 使用 jobs 命令查看进度, jobs ID 查看详情")
         self._task_mgr.add_task(downloader)
 
     def jobs(self, arg):
@@ -289,12 +289,13 @@ class Commander:
             error(f'该路径不存在哦: {path}')
             return None
         uploader = Uploader(self._disk)
+        uploader.set_uploaded_handler(lambda fid, isfile: self.refresh())  # 上传成功自动刷新
         if os.path.isfile(path):
             uploader.set_upload_path(path, is_file=True)
         else:
             uploader.set_upload_path(path, is_file=False)
         uploader.set_target(self._work_id, self._work_name)
-        info("上传任务已提交, 使用 jobs 命令查看进度")
+        info("上传任务已提交, 使用 jobs 命令查看进度, jobs ID 查看详情")
         self._task_mgr.add_task(uploader)
 
     def share(self, name):

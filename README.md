@@ -15,7 +15,6 @@
 ![cmd.png](https://upload.cc/i1/2020/04/04/W8GKsr.png)
 
 # 说明
-- 请使用 Python 3.8+ 运行，否则会报语法错误
 - 安装依赖 `pip install requests requests-toolbelt`, Windows 平台还需要 `pyreadline` [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14#issuecomment-590166417)
 - 为了方便管理，API 独立为一个项目[LanZouCloud-API](https://github.com/zaxtyson/LanZouCloud-API)
 - 由于某些原因不再支持突破官方限制，如果您需要上传大文件，请 fork 本项目并修改部分代码(见API文档)
@@ -68,9 +67,18 @@
 |[cdrec]  cd ..                       |退出回收站              |
 |bye                                  |退出程序                    |
 
+# 关于 Cookie
+
+- 由于 Web 和 App 端均被加上了滑动验证, CMD 不便绕过, 故使用 Cookie 登录
+- Cookie 内容见浏览器地址栏前的🔒 (Chrome/Microsoft Edge)
+  - `woozooo.com` -> `Cookie` -> `ylogin` -> `内容`
+  - `pc.woozooo.com` -> `Cookie` -> `phpdisk_info` -> `内容`
+- 需要注意的是 `phpdisk_info` 字段是很长的, 我们有许多伙计复制的时候**没有复制完整**而导致登录失败
+- 所以建议按 `F12` 进入调试页面, 找到 `应用程序` -> `存储` -> `Cookie` 可以很方便的找到 Cookie
+
 # Windows Terminal
 
-如果觉得 Windows 的 CMD 太丑, 可以把蓝奏云控制台加入新版
+如果伙计们觉得 Windows 的 CMD 太丑, 可以把蓝奏云控制台加入新版
 [Terminal](https://docs.microsoft.com/zh-cn/windows/terminal/) 的选项卡中
 
 修改 Terminal 的 `settings.json`
@@ -79,7 +87,7 @@
 
 ```
 {
-    // 文件位置请修改为实际安装路径
+    // 文件位置请修改为实际安装路径, 这里使用默认安装路径
     "guid": "{27d10ed2-13d0-420d-a602-39d1386872d0}",
     "name": "蓝奏云 CMD",
     "icon": "D:\\Program Files\\蓝奏云 CMD\\logo.ico",
@@ -93,6 +101,15 @@
 ![](https://upload.cc/i1/2021/03/03/8f2bVk.png)
 
 # 更新日志
+
+## `v2.6.1`
+
+- 修复下载某些 txt 文件失败的问题[#53](https://github.com/zaxtyson/LanZouCloud-API/issues/53)
+- 上传完成自动刷新工作目录, 无需手动刷新
+- 修复文件(夹)提取码标识符号失效的问题
+- `jobs`, `jobs ID` 命令输出美化了一点
+
+## `v2.6.0`
 
 - 修复无法上传文件的问题 [#52](https://github.com/zaxtyson/LanZouCloud-API/pull/52)
 - 新增 11 种允许上传的文件格式[#90](https://github.com/rachpt/lanzou-gui/issues/90)

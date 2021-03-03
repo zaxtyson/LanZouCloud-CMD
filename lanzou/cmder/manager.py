@@ -42,43 +42,57 @@ class TaskManager(object):
         task.start()
 
     @staticmethod
-    def _show_task(pid, task):
+    def _get_task_status(task):
         now_size, total_size = task.get_process()
         percent = now_size / total_size * 100
         has_error = len(task.get_err_msg()) != 0
         if task.is_alive():  # 任务执行中
-            status = '\033[1;32mRunning \033[0m'
+            status = '\033[1;32m运行中\033[0m'
         elif not task.is_alive() and has_error:  # 任务执行完成, 但是有错误信息
-            status = '\033[1;31mError   \033[0m'
+            status = '\033[1;31m出错  \033[0m'
         else:  # 任务正常执行完成
-            status = '\033[1;34mFinished\033[0m'
-        if task.get_task_type() == TaskType.DOWNLOAD:
-            d_arg, f_name = task.get_cmd_info()
-            d_arg = f_name if type(d_arg) == int else d_arg  # 显示 id 对应的文件名
-            print(f"[{pid}] Status: {status} | Process: {percent:6.2f}% | Download: {d_arg}")
-        else:
-            up_path, folder_name = task.get_cmd_info()
-            print(f"[{pid}] Status: {status} | Process: {percent:6.2f}% | Upload: {up_path} -> {folder_name}")
+            status = '\033[1;34m已完成\033[0m'
+        return percent, status
 
     def show_tasks(self):
         if self.is_empty():
             print(f"没有任务在后台运行哦")
-        else:
-            print('-' * 100)
-            for pid, task in enumerate(self._tasks):
-                self._show_task(pid, task)
-            print('-' * 100)
+            return
+
+        print('-' * 100)
+        for pid, task in enumerate(self._tasks):
+            percent, status = self._get_task_status(task)
+            if task.get_task_type() == TaskType.DOWNLOAD:
+                d_arg, f_name = task.get_cmd_info()
+                d_arg = f_name if type(d_arg) == int else d_arg  # 显示 id 对应的文件名
+                print(f"ID: {pid} | 状态: {status} | 进度: {percent:6.2f}% | 下载: {d_arg}")
+            else:
+                up_path, folder_name = task.get_cmd_info()
+                print(f"ID: {pid} | 状态: {status} | 进度: {percent:6.2f}% | 上传: {up_path} -> {folder_name}")
+        print('-' * 100)
 
     def show_detail(self, pid=-1):
         """显示任务详情"""
-        if 0 <= pid < len(self._tasks):
-            task = self._tasks[pid]
-            self._show_task(pid, task)
-            print("Error Messages:")
-            for msg in task.get_err_msg():
-                print(msg)
-        else:
+        if pid < 0 or pid >= len(self._tasks):
             error(f"进程号不存在: PID {pid}")
+            return
+
+        task = self._tasks[pid]
+        percent, status = self._get_task_status(task)
+        print('-' * 60)
+        print(f"进程ID号: {pid}")
+        print(f"任务状态: {status}")
+        print(f"任务类型: {'下载' if task.get_task_type() == TaskType.DOWNLOAD else '上传'}")
+        print(f"任务进度: {percent:.2f}%")
+        print("错误信息:")
+        if not task.get_err_msg():
+            print("\t没有错误, 一切正常 :)")
+            print('-' * 60)
+            return
+        # 显示出错信息
+        for msg in task.get_err_msg():
+            print("\t" + msg)
+        print('-' * 60)
 
 
 # 全局任务管理器对象

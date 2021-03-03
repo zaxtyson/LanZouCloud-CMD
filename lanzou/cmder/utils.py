@@ -1,4 +1,5 @@
 import os
+from time import sleep
 
 import readline
 import requests
@@ -150,11 +151,15 @@ def check_update():
     print("正在检测更新...")
     api = "https://api.github.com/repos/zaxtyson/LanZouCloud-CMD/releases/latest"
     try:
-        resp = requests.get(api).json()
+        resp = requests.get(api, timeout=3).json()
     except (requests.RequestException, AttributeError):
         error("检查更新时发生异常")
-        input()
-        return None
+        sleep(2)
+        return
+    except TimeoutError:
+        error("检查更新超时, 请稍后重试")
+        sleep(2)
+        return
     tag_name, msg = resp['tag_name'], resp['body']
     update_url = resp['assets'][0]['browser_download_url']
     ver = version.split('.')
@@ -162,19 +167,22 @@ def check_update():
     local_version = int(ver[0]) * 100 + int(ver[1]) * 10 + int(ver[2])
     remote_version = int(ver2[0]) * 100 + int(ver2[1]) * 10 + int(ver2[2])
     if remote_version > local_version:
-        print(f"程序可以更新 v{version} -> {tag_name}")
-        print(f"\n@更新说明:\n{msg}")
-        print(f"\n@Windows 更新:")
+        "\033[1;34mInfo : {msg}\033[0m"
+        print(f"\n程序可以更新 v{version} -> \033[1;32m{tag_name}\033[0m")
+        print(f"\n# 更新说明\n\n{msg}")
+        print(f"\n# Windows 更新\n")
         print(f"蓝奏云: https://www.lanzous.com/b0f14h1od")
         print(f"Github: {update_url}")
-        print("\n@Linux 更新:")
-        input("git clone https://github.com/zaxtyson/LanZouCloud-CMD.git")
+        print(f"国内加速: https://github.91chifun.workers.dev/{update_url}")
+        print("\n# Linux 更新\n")
+        input("git clone https://github.com.cnpmjs.org/zaxtyson/LanZouCloud-API.git")
     else:
-        print("(*/ω＼*) 暂无新版本发布~")
+        print("\n(*/ω＼*) 暂无新版本发布~")
         print("但项目可能已经更新，建议去项目主页看看")
-        print("如有 Bug 或建议,请提 Issue 或发邮件反馈")
+        print("如有 Bug 或建议,请提 Issue 或发邮件反馈\n")
         print("Email: zaxtyson@foxmail.com")
         print("Github: https://github.com/zaxtyson/LanZouCloud-CMD")
+        print()
 
 
 def show_tips_first():
