@@ -98,7 +98,7 @@
 }
 ```
 
-![](https://upload.cc/i1/2021/03/03/8f2bVk.png)
+![](https://upload.cc/i1/2021/03/03/UIDRAQ.png)
 
 # 更新日志
 
