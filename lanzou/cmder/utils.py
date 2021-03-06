@@ -8,12 +8,12 @@ from lanzou.api import LanZouCloud
 from lanzou.cmder import version, config
 
 
-def error(msg):
-    print(f"\033[1;31mError : {msg}\033[0m")
+def error(msg, end='\n'):
+    print(f"\033[1;31mError : {msg}\033[0m", end=end)
 
 
-def info(msg):
-    print(f"\033[1;34mInfo : {msg}\033[0m")
+def info(msg, end='\n'):
+    print(f"\033[1;34mInfo : {msg}\033[0m", end=end)
 
 
 def clear_screen():
@@ -175,7 +175,8 @@ def check_update():
         print(f"Github: {update_url}")
         print(f"国内加速: https://github.91chifun.workers.dev/{update_url}")
         print("\n# Linux 更新\n")
-        input("git clone https://github.com.cnpmjs.org/zaxtyson/LanZouCloud-API.git")
+        print("git clone https://hub.fastgit.org/zaxtyson/LanZouCloud-CMD.git")
+        input("python3.8 -m pip install -r requirements.txt")
     else:
         print("\n(*/ω＼*) 暂无新版本发布~")
         print("但项目可能已经更新，建议去项目主页看看")
@@ -188,6 +189,6 @@ def check_update():
 def show_tips_first():
     """第一次启动时的提醒"""
     if not config.cookie:
-        info(f"当前下载文件保存路径为: {config.save_path}")
+        info(f"下载文件保存路径为: {config.save_path}")
         info("使用 setpath 命令可修改保存路径")
         info("其它帮助信息请使用 help 命令查看\n")

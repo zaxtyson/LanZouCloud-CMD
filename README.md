@@ -106,6 +106,7 @@
 ## `v2.6.2`
 
 - 支持登录时自动读取浏览器 Cookie[#59](https://github.com/zaxtyson/LanZouCloud-CMD/issues/59)
+- 默认下载路径更改为 `用户家目录下的 Downloads 文件夹`
 
 ## `v2.6.1`
 

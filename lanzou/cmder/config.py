@@ -1,3 +1,4 @@
+from os.path import expanduser, sep
 from pickle import load, dump
 
 __all__ = ['config']
@@ -27,7 +28,10 @@ class Config:
 
     @property
     def save_path(self):
-        return self._config.get('path')
+        path = self._config.get('path')
+        if not path:
+            return expanduser("~") + sep + "Downloads"
+        return path
 
     @save_path.setter
     def save_path(self, value):

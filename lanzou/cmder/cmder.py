@@ -117,38 +117,44 @@ class Commander:
             self.refresh()
             return
 
-        cookie, browser = load_with_keys('.woozooo.com', ['ylogin', 'phpdisk_info'])
-        if not cookie:
-            info("请在浏览器端登录账号, 然后回到控制台按回车")
-            open_new_tab('https://pc.woozooo.com/')
-            input("")
-            print("浏览器可能等待几秒才将数据写入磁盘, 请稍等", end="", flush=True)
-            counter = 0
-            while not cookie:
-                sleep(1)
-                counter += 1
-                print(".", end="", flush=True)
-                cookie, browser = load_with_keys('.woozooo.com', ['ylogin', 'phpdisk_info'])
-
-                if counter == 15:  # 读取超时
-                    stop = input("\n暂未读取到浏览器数据, 要手动输入吗(y) :") or "y"
-                    if stop == "y":
-                        break
-                    else:
-                        counter = 0
-                        continue  # 继续等待浏览器写入数据
-
-        if cookie:
-            print()
-            info(f"从 {browser} 读取用户 Cookie 成功")
-        else:
+        auto = input("自动读取浏览器 Cookie 登录(y): ") or "y"
+        if auto != "y":
             info("请手动设置 Cookie 内容:")
-            ylogin = input("ylogin=") or ""
-            disk_info = input("phpdisk_info=") or ""
+            ylogin = input("ylogin: ") or ""
+            disk_info = input("phpdisk_info: ") or ""
             cookie = {"ylogin": str(ylogin), "phpdisk_info": disk_info}
             if not ylogin or not disk_info:
                 error("请输入正确的 Cookie 信息")
                 return
+        else:
+            cookie, browser = load_with_keys('.woozooo.com', ['ylogin', 'phpdisk_info'])
+            if cookie:
+                print()
+                info(f"从 {browser} 读取用户 Cookie 成功")
+            else:
+                info("请在浏览器端登录账号")
+                open_new_tab('https://pc.woozooo.com/')
+                info("浏览器可能等待几秒才将数据写入磁盘, 请稍等")
+                counter = 0
+                while not cookie:
+                    sleep(1)
+                    counter += 1
+                    print('.', end='', flush=True)
+                    cookie, browser = load_with_keys('.woozooo.com', ['ylogin', 'phpdisk_info'])
+
+                    if cookie:
+                        print()
+                        info(f"从 {browser} 读取用户 Cookie 成功")
+                        break
+
+                    if counter == 10:  # 读取超时
+                        ctn = input("\n暂未读取到浏览器数据, 继续扫描(y) :") or "y"
+                        if ctn == "y":
+                            counter = 0
+                            continue
+                        else:
+                            error("自动读取 Cookie 失败")
+                            return
 
         # 登录蓝奏云
         if self._disk.login_by_cookie(cookie) == LanZouCloud.SUCCESS:

@@ -150,7 +150,9 @@ def get_linux_pass(os_crypt_name):
                 "{} Keys".format(os_crypt_name.capitalize()),
                 "{} Safe Storage".format(os_crypt_name.capitalize())
             ).encode('utf-8')
-        except RuntimeError:
+        # it may raise `dbus.exceptions.DBusException` `eyring.errors.InitError`
+        # on Gnome environment, all of them extended from `Exception`
+        except Exception:
             pass
 
     # try default peanuts password, probably won't work
