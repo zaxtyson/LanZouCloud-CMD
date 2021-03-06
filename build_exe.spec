@@ -7,7 +7,7 @@
 block_cipher = None
 
 
-a = Analysis(['lanzou_cmd.py'],
+a = Analysis(['main.py'],
              pathex=['.'],
              binaries=[],
              datas=[('user.dat','.'), ('logo.ico', '.')],
