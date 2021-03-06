@@ -135,6 +135,8 @@ class LanZouCloud(object):
 
     def logout(self) -> int:
         """注销"""
+        self._cookies = None
+        self._session.cookies.clear()
         html = self._get(self._account_url, params={'action': 'logout'})
         if not html:
             return LanZouCloud.NETWORK_ERROR

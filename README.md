@@ -70,6 +70,7 @@
 # 关于 Cookie
 
 - 由于 Web 和 App 端均被加上了滑动验证, CMD 不便绕过, 故使用 Cookie 登录
+- 一般情况下, 程序能够自动读取浏览器的 Cookie, 完成登录, 如果有问题可手工输入
 - Cookie 内容见浏览器地址栏前的🔒 (Chrome/Microsoft Edge)
   - `woozooo.com` -> `Cookie` -> `ylogin` -> `内容`
   - `pc.woozooo.com` -> `Cookie` -> `phpdisk_info` -> `内容`
@@ -101,6 +102,10 @@
 ![](https://upload.cc/i1/2021/03/03/UIDRAQ.png)
 
 # 更新日志
+
+## `v2.6.2`
+
+- 支持登录时自动读取浏览器 Cookie[#59](https://github.com/zaxtyson/LanZouCloud-CMD/issues/59)
 
 ## `v2.6.1`
 
