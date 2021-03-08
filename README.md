@@ -103,6 +103,10 @@
 
 # 更新日志
 
+## `v2.6.3`
+
+- 修复文件后缀非小写导致的误判问题[#92](https://github.com/rachpt/lanzou-gui/issues/92)
+
 ## `v2.6.2`
 
 - 支持登录时自动读取浏览器 Cookie[#59](https://github.com/zaxtyson/LanZouCloud-CMD/issues/59)
