@@ -12,7 +12,7 @@ from random import uniform, choices, sample, shuffle, choice
 import requests
 
 __all__ = ['logger', 'remove_notes', 'name_format', 'time_format', 'is_name_valid', 'is_file_url',
-           'is_folder_url', 'big_file_split', 'un_serialize', 'let_me_upload', 'auto_rename']
+           'is_folder_url', 'big_file_split', 'un_serialize', 'let_me_upload', 'auto_rename', 'calc_acw_sc__v2']
 
 # 调试日志设置
 logger = logging.getLogger('lanzou')
@@ -26,7 +26,7 @@ logger.addHandler(console)
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
-    'Referer': 'https://pan.lanzous.com',
+    # 'Referer': 'https://pan.lanzous.com',  # 可以没有
     'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 
@@ -207,3 +207,38 @@ def auto_rename(file_path) -> str:
     while f"{fname_no_ext}({count}){ext}" in flist:
         count += 1
     return fpath + os.sep + fname_no_ext + '(' + str(count) + ')' + ext
+
+
+def calc_acw_sc__v2(html_text: str) -> str:
+    arg1 = re.search(r"arg1='([0-9A-Z]+)'", html_text)
+    arg1 = arg1.group(1) if arg1 else ""
+    acw_sc__v2 = hex_xor(unsbox(arg1), "3000176000856006061501533003690027800375")
+    return acw_sc__v2
+
+
+# 参考自 https://zhuanlan.zhihu.com/p/228507547
+def unsbox(str_arg):
+    v1 = [15, 35, 29, 24, 33, 16, 1, 38, 10, 9, 19, 31, 40, 27, 22, 23, 25, 13, 6, 11, 39, 18, 20, 8, 14, 21, 32, 26, 2,
+          30, 7, 4, 17, 5, 3, 28, 34, 37, 12, 36]
+    v2 = ["" for _ in v1]
+    for idx in range(0, len(str_arg)):
+        v3 = str_arg[idx]
+        for idx2 in range(len(v1)):
+            if v1[idx2] == idx + 1:
+                v2[idx2] = v3
+
+    res = ''.join(v2)
+    return res
+
+
+def hex_xor(str_arg, args):
+    res = ''
+    for idx in range(0, min(len(str_arg), len(args)), 2):
+        v1 = int(str_arg[idx:idx + 2], 16)
+        v2 = int(args[idx:idx + 2], 16)
+        v3 = format(v1 ^ v2, 'x')
+        if len(v3) == 1:
+            v3 = '0' + v3
+        res += v3
+
+    return res

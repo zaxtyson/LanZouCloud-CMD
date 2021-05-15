@@ -101,7 +101,25 @@
 
 ![](https://upload.cc/i1/2021/03/03/UIDRAQ.png)
 
+# Terminus
+
+除了 Windows Terminal, 还可以试试 [Terminus](https://github.com/eugeny/terminus)
+
+通过 `Settings` > `Shell` > `New Profiles` > `Custom Shell` 添加一个配置
+
+点击新添加的配置, 设置 `Command` 为 `D:\Program Files\蓝奏云 CMD\lanzou-cmd.exe`(这里改为实际安装路径),
+`Working directory` 可以设置为安装目录或其它目录 `D:\Program Files\蓝奏云 CMD`
+
+![](https://i.bmp.ovh/imgs/2021/05/9338f7feb6b968cc.png)
+
 # 更新日志
+
+## `v2.6.5`
+
+-
+修复蓝奏云主域名解析异常的问题[#59](https://github.com/zaxtyson/LanZouCloud-API/issues/59) [#60](https://github.com/zaxtyson/LanZouCloud-API/pull/60)
+- 修复某些文件夹信息获取失败的问题[#58](https://github.com/zaxtyson/LanZouCloud-API/pull/58)
+- 修复下载页的 Cookie 验证问题[#55](https://github.com/zaxtyson/LanZouCloud-API/pull/55)
 
 ## `v2.6.3`
 
