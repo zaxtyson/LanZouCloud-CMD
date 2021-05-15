@@ -116,8 +116,7 @@
 
 ## `v2.6.5`
 
--
-修复蓝奏云主域名解析异常的问题[#59](https://github.com/zaxtyson/LanZouCloud-API/issues/59) [#60](https://github.com/zaxtyson/LanZouCloud-API/pull/60)
+- 修复蓝奏云主域名解析异常的问题[#59](https://github.com/zaxtyson/LanZouCloud-API/issues/59) [#60](https://github.com/zaxtyson/LanZouCloud-API/pull/60)
 - 修复某些文件夹信息获取失败的问题[#58](https://github.com/zaxtyson/LanZouCloud-API/pull/58)
 - 修复下载页的 Cookie 验证问题[#55](https://github.com/zaxtyson/LanZouCloud-API/pull/55)
 
