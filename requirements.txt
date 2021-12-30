@@ -12,7 +12,7 @@ pycparser==2.20
 pycryptodome==3.10.1
 pyreadline==2.1
 pywin32-ctypes==0.2.0
-requests==2.23.0
+requests==2.26.0
 requests-toolbelt==0.9.1
 SecretStorage==3.3.1
-urllib3==1.25.9
+urllib3==1.26.7
