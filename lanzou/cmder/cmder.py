@@ -33,7 +33,6 @@ class Commander:
         self._prompt = '> '
         self._disk = LanZouCloud()
         self._is_login = False
-        # self._disk.ignore_limits()
         self._task_mgr = global_task_mgr
         self._dir_list = FolderList()
         self._file_list = FileList()
@@ -47,6 +46,10 @@ class Commander:
         self._default_dir_pwd = config.default_dir_pwd
         self._disk.set_max_size(config.max_size)
         self._disk.set_upload_delay(config.upload_delay)
+
+        if ignore_limit():
+            """Please take responsibility for your own actions"""
+            self._disk.ignore_limits()
 
     @staticmethod
     def clear():

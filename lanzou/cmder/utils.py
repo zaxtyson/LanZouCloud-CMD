@@ -46,6 +46,10 @@ def why_error(code):
         return '未知错误'
 
 
+def ignore_limit():
+    return os.path.exists(".ignore_limit")
+
+
 def set_console_style():
     """设置命令行窗口样式"""
     if os.name != 'nt':
@@ -86,6 +90,7 @@ def set_completer(choice_list, *, cmd_list=None, condition=None):
 def print_logo():
     """输出logo"""
     clear_screen()
+    ext_msg = "Unlimited " if ignore_limit() else ""
     logo_str = f"""
         _                  ______            _____ _                 _ 
        | |                |___  /           /  __ \ |               | |
@@ -94,7 +99,7 @@ def print_logo():
        | |___| (_| | | | | / /__| (_) | |_| | \__/\ | (_) | |_| | (_| |
        \_____/\____|_| |_|\_____/\___/ \____|\____/_|\___/ \____|\____|
       --------------------------------------------------------------------
-      Github: https://github.com/zaxtyson/LanZouCloud-CMD (Version: {version})
+      Github: https://github.com/zaxtyson/LanZouCloud-CMD ({ext_msg}Version: {version})
       --------------------------------------------------------------------
     """
     print(logo_str)
@@ -171,12 +176,10 @@ def check_update():
         print(f"\n程序可以更新 v{version} -> \033[1;32m{tag_name}\033[0m")
         print(f"\n# 更新说明\n\n{msg}")
         print(f"\n# Windows 更新\n")
-        print(f"蓝奏云: https://www.lanzous.com/b0f14h1od")
+        print(f"蓝奏云: https://zaxtyson.lanzouf.com/b0f14h1od")
         print(f"Github: {update_url}")
-        print(f"国内加速: https://github.91chifun.workers.dev/{update_url}")
         print("\n# Linux 更新\n")
-        print("git clone https://hub.fastgit.org/zaxtyson/LanZouCloud-CMD.git")
-        input("python3.8 -m pip install -r requirements.txt")
+        print("git pull --rebase")
     else:
         print("\n(*/ω＼*) 暂无新版本发布~")
         print("但项目可能已经更新，建议去项目主页看看")

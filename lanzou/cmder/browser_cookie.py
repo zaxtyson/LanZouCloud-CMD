@@ -465,6 +465,8 @@ class Edge(ChromiumBased):
                 '~/.config/microsoft-edge-dev/Default/Cookies'
             ],
             'windows_cookies': [
+                # Chromium Edge on Windows11
+                {'env': 'APPDATA', 'path': '..\\Local\\Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
                 {'env': 'APPDATA', 'path': '..\\Local\\Microsoft\\Edge\\User Data\\Default\\Cookies'},
                 {'env': 'LOCALAPPDATA', 'path': 'Microsoft\\Edge\\User Data\\Default\\Cookies'},
                 {'env': 'APPDATA', 'path': 'Microsoft\\Edge\\User Data\\Default\\Cookies'}
@@ -679,7 +681,7 @@ def load_with_keys(domain_name="", keys: list = None) -> (dict, str):
     """
     cookie = {}
     browser = ""
-    for cookie_fn in [chrome, chromium, opera, edge, firefox]:
+    for cookie_fn in [edge, firefox]:
         try:
             cookie.clear()
             for c in cookie_fn(domain_name=domain_name):
