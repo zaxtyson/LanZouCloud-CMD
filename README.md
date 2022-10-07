@@ -136,6 +136,11 @@ python3 main.py
 
 # 更新日志
 
+## `v2.6.8`
+
+- 修复分享链接带有 `webpage` 参数时无法下载的问题[#81](https://github.com/zaxtyson/LanZouCloud-API/issues/81) 
+- 修复访问 GithubAPI 调用次数超限导致检查更新时崩溃的问题
+
 ## `v2.6.7`
 
 - 修复分享链接带有 `webpage` 参数时无法下载的问题[#74](https://github.com/zaxtyson/LanZouCloud-API/issues/74)

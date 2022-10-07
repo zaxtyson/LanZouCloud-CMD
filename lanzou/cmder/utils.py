@@ -157,7 +157,29 @@ def check_update():
     api = "https://api.github.com/repos/zaxtyson/LanZouCloud-CMD/releases/latest"
     try:
         resp = requests.get(api, timeout=3).json()
-    except (requests.RequestException, AttributeError):
+        tag_name, msg = resp['tag_name'], resp['body']
+        update_url = resp['assets'][0]['browser_download_url']
+        ver = version.split('.')
+        ver2 = tag_name.replace('v', '').split('.')
+        local_version = int(ver[0]) * 100 + int(ver[1]) * 10 + int(ver[2])
+        remote_version = int(ver2[0]) * 100 + int(ver2[1]) * 10 + int(ver2[2])
+        if remote_version > local_version:
+            "\033[1;34mInfo : {msg}\033[0m"
+            print(f"\n程序可以更新 v{version} -> \033[1;32m{tag_name}\033[0m")
+            print(f"\n# 更新说明\n\n{msg}")
+            print(f"\n# Windows 更新\n")
+            print(f"蓝奏云: https://zaxtyson.lanzouf.com/b0f14h1od")
+            print(f"Github: {update_url}")
+            print("\n# Linux 更新\n")
+            print("git pull --rebase")
+        else:
+            print("\n(*/ω＼*) 暂无新版本发布~")
+            print("但项目可能已经更新，建议去项目主页看看")
+            print("如有 Bug 或建议,请提 Issue 或发邮件反馈\n")
+            print("Email: zaxtyson@foxmail.com")
+            print("Github: https://github.com/zaxtyson/LanZouCloud-CMD")
+            print()
+    except (requests.RequestException, AttributeError, KeyError):
         error("检查更新时发生异常")
         sleep(2)
         return
@@ -165,28 +187,6 @@ def check_update():
         error("检查更新超时, 请稍后重试")
         sleep(2)
         return
-    tag_name, msg = resp['tag_name'], resp['body']
-    update_url = resp['assets'][0]['browser_download_url']
-    ver = version.split('.')
-    ver2 = tag_name.replace('v', '').split('.')
-    local_version = int(ver[0]) * 100 + int(ver[1]) * 10 + int(ver[2])
-    remote_version = int(ver2[0]) * 100 + int(ver2[1]) * 10 + int(ver2[2])
-    if remote_version > local_version:
-        "\033[1;34mInfo : {msg}\033[0m"
-        print(f"\n程序可以更新 v{version} -> \033[1;32m{tag_name}\033[0m")
-        print(f"\n# 更新说明\n\n{msg}")
-        print(f"\n# Windows 更新\n")
-        print(f"蓝奏云: https://zaxtyson.lanzouf.com/b0f14h1od")
-        print(f"Github: {update_url}")
-        print("\n# Linux 更新\n")
-        print("git pull --rebase")
-    else:
-        print("\n(*/ω＼*) 暂无新版本发布~")
-        print("但项目可能已经更新，建议去项目主页看看")
-        print("如有 Bug 或建议,请提 Issue 或发邮件反馈\n")
-        print("Email: zaxtyson@foxmail.com")
-        print("Github: https://github.com/zaxtyson/LanZouCloud-CMD")
-        print()
 
 
 def show_tips_first():

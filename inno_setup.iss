@@ -2,14 +2,14 @@
 ; Inno Setup: https://zaxtyson.lanzouf.com/iVTrC02i5lzc
 
 #define MyAppName "À¶×àÔÆ¿ØÖÆÌ¨"
-#define MyAppVersion "2.6.7"
+#define MyAppVersion "2.6.8"
 #define MyAppPublisher "zaxtyson"
 #define MyAppURL "https://github.com/zaxtyson/LanZouCloud-CMD"
 
 #define MyAppExeName "lanzou-cmd.exe"
 #define PackSourceDir "C:\Users\zaxtyson\PycharmProjects\LanZouCloud-CMD\dist\lanzou-cmd"
 #define PackOutputDir "C:\Users\zaxtyson\PycharmProjects\LanZouCloud-CMD\dist"
-#define PackOutputAppName "lanzou-cmd_x64_v2.6.7"
+#define PackOutputAppName "lanzou-cmd_x64_v2.6.8"
 
 [Setup]
 AppId={{27D10ED2-13D0-420D-A602-39D1386872D0}
